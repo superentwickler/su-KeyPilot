@@ -1,5 +1,5 @@
 # KeyPilot – Installation mit Docker Compose
-# Nach dem Start: http://localhost (Frontend), Backend intern auf Port 8000
+# Nach dem Start: Frontend unter http://localhost (Standard Port 80, über FRONTEND_PORT änderbar)
 
 services:
   backend:
@@ -19,7 +19,7 @@ services:
     build: ./frontend
     container_name: keypilot-frontend
     ports:
-      - "80:80"
+      - "${FRONTEND_PORT:-80}:80"
     depends_on:
       - backend
     restart: unless-stopped

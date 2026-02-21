@@ -28,7 +28,7 @@ Credential management (passwords, SSH keys, API keys) with a **built-in crypto c
 docker compose up -d --build
 ```
 
-- **Frontend:** http://localhost (port 80)
+- **Frontend:** http://localhost (Standard Port 80; Port konfigurierbar: `FRONTEND_PORT=3000` in Projektroot-`.env` oder Umgebung, dann http://localhost:3000)
 - **Data** (DB) is stored in a Docker volume and persists across restarts.
 - **Ollama** (local LLM): Usually runs on the host. In the container, `OLLAMA_BASE_URL=http://host.docker.internal:11434` is set (Mac/Windows). On Linux, set the host IP if needed, e.g. `OLLAMA_BASE_URL=http://172.17.0.1:11434`.
 
