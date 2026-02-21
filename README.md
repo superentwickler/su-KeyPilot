@@ -15,6 +15,14 @@ Credential management (passwords, SSH keys, API keys) with a **built-in crypto c
 
 **Without Docker:** Open two terminals → `./scripts/start-local.sh backend` and `./scripts/start-local.sh frontend` → http://localhost:5173 (see [Option 2: Manual](#option-2-manual-no-docker)).
 
+**Welche .env für was?**
+
+| Datei | Wann genutzt | Nicht genutzt bei |
+|-------|--------------|--------------------|
+| **Projektroot `.env`** (neben `docker-compose.yml`) | Nur bei **Docker** (`docker compose`). Steuert z. B. `KEYPILOT_DATA_DIR`, `FRONTEND_PORT`, `BACKEND_PORT`, `OLLAMA_*`. Siehe `.env.example` im Projektroot. | Lokaler Aufruf (Backend/Frontend lesen diese Datei nicht.) |
+| **`backend/.env`** | Nur bei **lokalen** Backend-Starts (`uvicorn`, `./scripts/start-local.sh backend`). Steuert z. B. `DATABASE_URL`, `OLLAMA_*`. Siehe `backend/.env.example`. | Docker (Container nutzt feste Werte bzw. Projektroot-.env.) |
+| **`frontend/.env`** | Nur bei **lokalen** Frontend-Starts (`npm run dev`, `./scripts/start-local.sh frontend`). Steuert z. B. `FRONTEND_PORT`. Siehe `frontend/.env.example`. | Docker (Port über Projektroot-.env.) |
+
 ---
 
 ### Option 1: Docker Compose
@@ -173,10 +181,8 @@ Without Ollama running, the Chat will not work (API returns an error).
 
 **Chat still not working?**
 
-1. **Backend in Docker:** Inside the container, `localhost` is the container itself. Set in `backend/.env` or docker-compose:
-   - Mac/Windows: `OLLAMA_BASE_URL=http://host.docker.internal:11434`
-   - Linux: `OLLAMA_BASE_URL=http://172.17.0.1:11434` (or your host IP)
-2. **Model:** The backend uses `OLLAMA_MODEL=llama3.2` by default. Ensure the model is pulled: `ollama pull llama3.2` and/or `ollama list`. If you use another model, set `OLLAMA_MODEL=your-model` in `backend/.env`.
+1. **Backend in Docker:** Inside the container, `localhost` is the container itself. Set in **Projektroot `.env`** (nicht `backend/.env`): Mac/Windows: `OLLAMA_BASE_URL=http://host.docker.internal:11434`; Linux: `OLLAMA_BASE_URL=http://172.17.0.1:11434` (oder Host-IP).
+2. **Model:** Default ist `OLLAMA_MODEL=llama3.2`. Modell ziehen: `ollama pull llama3.2` bzw. `ollama list`. Anderes Modell: **Docker** → Projektroot `.env`; **lokal** → `backend/.env`.
 3. **Check:** In the Chat tab, send a message; if Ollama is unreachable or the model is missing, the error text will now show the cause (e.g. “Cannot reach Ollama at …” or “model not found”).
 
 ## Scripts (`scripts/`)

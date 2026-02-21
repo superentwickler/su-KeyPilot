@@ -42,12 +42,24 @@ export type Credential = {
   updated_at: string
 }
 
+function apiErrorDetail(body: unknown, fallback: string): string {
+  if (body && typeof body === "object" && "detail" in body) {
+    const d = (body as { detail: unknown }).detail
+    if (typeof d === "string") return d
+    if (Array.isArray(d) && d[0] && typeof d[0] === "object" && "msg" in d[0]) return String((d[0] as { msg: unknown }).msg)
+  }
+  return fallback
+}
+
 export async function listCredentials(type?: string, category?: string): Promise<Credential[]> {
   const params = new URLSearchParams()
   if (type) params.set("type", type)
   if (category) params.set("category", category)
   const r = await fetch(`${BASE}/credentials?${params}`)
-  if (!r.ok) throw new Error("List credentials failed")
+  if (!r.ok) {
+    const e = await r.json().catch(() => ({}))
+    throw new Error(apiErrorDetail(e, "List credentials failed"))
+  }
   return r.json()
 }
 
@@ -66,21 +78,27 @@ export async function createCredential(data: {
   })
   if (!r.ok) {
     const e = await r.json().catch(() => ({}))
-    throw new Error(e.detail?.detail || "Create failed")
+    throw new Error(apiErrorDetail(e, "Create failed"))
   }
   return r.json()
 }
 
 export async function getCredentialSecret(id: number): Promise<string> {
   const r = await fetch(`${BASE}/credentials/${id}/secret`)
-  if (!r.ok) throw new Error("Get secret failed")
+  if (!r.ok) {
+    const e = await r.json().catch(() => ({}))
+    throw new Error(apiErrorDetail(e, "Get secret failed"))
+  }
   const d = await r.json()
   return d.secret
 }
 
 export async function deleteCredential(id: number) {
   const r = await fetch(`${BASE}/credentials/${id}`, { method: "DELETE" })
-  if (!r.ok) throw new Error("Delete failed")
+  if (!r.ok) {
+    const e = await r.json().catch(() => ({}))
+    throw new Error(apiErrorDetail(e, "Delete failed"))
+  }
 }
 
 export async function generatePassword(): Promise<string> {

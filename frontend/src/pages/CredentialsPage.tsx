@@ -46,6 +46,7 @@ export function CredentialsPage() {
     setLoading(true)
     listCredentials(typeFilter || undefined, undefined)
       .then(setItems)
+      .catch((err) => alert(err instanceof Error ? err.message : "Could not load credentials."))
       .finally(() => setLoading(false))
   }
 
@@ -113,8 +114,8 @@ export function CredentialsPage() {
     try {
       const secret = await getCredentialSecret(id)
       setSecretCache((c) => ({ ...c, [id]: secret }))
-    } catch {
-      alert("Could not load secret.")
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Could not load secret.")
     }
   }
 

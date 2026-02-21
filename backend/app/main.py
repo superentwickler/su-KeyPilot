@@ -1,11 +1,15 @@
 # KeyPilot Backend – FastAPI
+import logging
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.config import Settings
+
+logger = logging.getLogger(__name__)
 from app.db.database import engine, Base, get_db
 from app.db import models  # noqa: F401 – Tabellen bei Base registrieren
 from app.api import vault_router, credentials_router, chat_router
@@ -58,6 +62,18 @@ app.include_router(vault_router)
 app.include_router(credentials_router)
 app.include_router(chat_router)
 app.include_router(utils_router)
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    """Log full traceback and return 500 with message so frontend can show it."""
+    if isinstance(exc, HTTPException):
+        raise exc
+    logger.exception("Unhandled exception for %s %s", request.method, request.url.path)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc)},
+    )
 
 
 @app.get("/health")
