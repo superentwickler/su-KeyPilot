@@ -21,14 +21,23 @@ Credential management (passwords, SSH keys, API keys) with a **built-in crypto c
 
 **Prerequisite:** Docker and Docker Compose installed.
 
-```bash
-# From project root – or use the script:
-./scripts/start-docker.sh
-# Or manually:
-docker compose up -d --build
-```
+**So startest du die ganze App in Docker:**
+
+1. **Immer aus dem Projektroot** (Ordner, in dem `docker-compose.yml` liegt, z. B. `paiss`):
+   ```bash
+   cd /pfad/zu/paiss
+   ./scripts/start-docker.sh
+   ```
+   Oder manuell: `docker compose up -d --build`
+
+2. **Lokal laufendes Backend/Frontend** (z. B. `./scripts/start-local.sh backend/frontend`): Vorher stoppen, damit Port 80 frei ist – sonst meldet Docker ggf. „port already in use“. Backend (Port 8000) wird von Docker nur intern genutzt, kollidiert also nicht mit lokalem Uvicorn.
+
+3. **In Docker Desktop:** Unter **Containers** siehst du die Container **keypilot-backend** und **keypilot-frontend**. Der Projektname ist der Ordnername (z. B. `paiss`). Beide müssen „Running“ sein.
+
+4. **Wenn „backend nicht vorhanden“ oder Fehler:** Status prüfen mit `docker compose ps`, Backend-Logs mit `docker compose logs backend`. Wenn der Backend-Container fehlt oder beendet ist: `docker compose up -d --build` erneut aus dem Projektroot ausführen.
 
 - **Frontend:** http://localhost (Standard Port 80; Port konfigurierbar: `FRONTEND_PORT=3000` in Projektroot-`.env` oder Umgebung, dann http://localhost:3000)
+- **Backend** läuft im Container und ist unter http://localhost:8000 erreichbar (Port konfigurierbar: `BACKEND_PORT=…`). Du startest **kein** `uvicorn` auf dem Host – nur `docker compose up` reicht.
 - **Data** (DB) is stored in a Docker volume and persists across restarts.
 - **Ollama** (local LLM): Usually runs on the host. In the container, `OLLAMA_BASE_URL=http://host.docker.internal:11434` is set (Mac/Windows). On Linux, set the host IP if needed, e.g. `OLLAMA_BASE_URL=http://172.17.0.1:11434`.
 
@@ -67,6 +76,8 @@ Then the DB lives in the project folder and is the **same** for local and Docker
 ---
 
 ### Option 2: Manual (no Docker)
+
+**Nur wenn du ohne Docker arbeitest:** Backend und Frontend startest du selbst (z. B. `uvicorn` und `npm run dev`). Bei Docker (Option 1) brauchst du diese Befehle nicht.
 
 KeyPilot runs fully **without Docker**: backend (Python/FastAPI) and frontend (React/Vite) are started locally; the DB is a local SQLite file (`backend/data/keypilot.db`).
 

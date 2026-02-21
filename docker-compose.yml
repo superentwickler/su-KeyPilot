@@ -1,10 +1,15 @@
 # KeyPilot – Installation mit Docker Compose
 # Nach dem Start: Frontend unter http://localhost (Standard Port 80, über FRONTEND_PORT änderbar)
+# Projektname in Docker Desktop: su-KeyPilot (unabhängig vom Ordner)
+
+name: su-KeyPilot
 
 services:
   backend:
     build: ./backend
     container_name: keypilot-backend
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
     volumes:
       - keypilot-data:/app/data
     environment:

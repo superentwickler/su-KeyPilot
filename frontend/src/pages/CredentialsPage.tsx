@@ -15,7 +15,7 @@ import { Label } from "../components/ui/label"
 import { listCredentials, createCredential, getCredentialSecret, deleteCredential, generatePassword, credentialTypeLabel } from "../api/client"
 import type { Credential } from "../api/client"
 import { useVaultSealed } from "../hooks/useVaultSealed"
-import { Key, Plus, Trash2, Eye, Search, Copy } from "lucide-react"
+import { Plus, Trash2, Eye, Search, Copy } from "lucide-react"
 
 const UNGROUPED_LABEL = "— No category —"
 const CREDENTIAL_TYPES = [

@@ -57,11 +57,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <p className="font-medium">Backend unreachable</p>
           <p className="text-sm text-muted-foreground">
             The dev server cannot connect to <code className="bg-muted px-1 rounded">localhost:8000</code>.
-            Start the backend in a separate terminal first.
+            Start the backend in a separate terminal, or run the full app with Docker.
           </p>
-          <pre className="text-left text-sm bg-muted p-4 rounded-md overflow-x-auto">
-            cd backend && uvicorn app.main:app --reload --port 8000
-          </pre>
+          <div className="text-left text-sm space-y-2">
+            <p className="text-muted-foreground font-medium">Option 1 – Backend locally:</p>
+            <pre className="bg-muted p-4 rounded-md overflow-x-auto">
+              cd backend && uvicorn app.main:app --reload --port 8000
+            </pre>
+            <p className="text-muted-foreground font-medium mt-2">Option 2 – Full app in Docker:</p>
+            <pre className="bg-muted p-4 rounded-md overflow-x-auto">
+              ./scripts/start-docker.sh
+            </pre>
+          </div>
           <Button onClick={refresh}>Retry</Button>
         </div>
       </div>
