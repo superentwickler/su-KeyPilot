@@ -90,6 +90,13 @@ export async function generatePassword(): Promise<string> {
   return d.password
 }
 
+/** Speicherort der DB (für Hinweis/Anzeige in der App). */
+export async function getAppInfo(): Promise<{ data_dir: string | null; database: string }> {
+  const r = await fetch(`${BASE}/utils/info`)
+  if (!r.ok) return { data_dir: null, database: "other" }
+  return r.json()
+}
+
 /** Backup-Datei (DB) vom Server laden und als Download anbieten. */
 export async function downloadBackup(): Promise<void> {
   const r = await fetch(`${BASE}/utils/backup`)

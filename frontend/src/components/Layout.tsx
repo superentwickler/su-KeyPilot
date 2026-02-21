@@ -95,6 +95,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <span className="ml-2 text-sm text-muted-foreground">– Vault sealed</span>
         </header>
         <main className="flex-1 p-6">{children}</main>
+        <footer className="border-t py-1.5 px-4 text-center text-xs text-muted-foreground">
+          superentwickler · MIT License © 2026
+        </footer>
       </div>
     )
   }
@@ -136,6 +139,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </nav>
       </header>
       <main className="flex-1 p-6">{children}</main>
+      <footer className="border-t py-1.5 px-4 text-center text-xs text-muted-foreground">
+        superentwickler · MIT License © 2026
+      </footer>
     </div>
   )
 }

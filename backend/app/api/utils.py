@@ -31,6 +31,16 @@ def _sqlite_db_path() -> Path | None:
     return None
 
 
+@router.get("/info")
+def app_info():
+    """Aktueller Speicherort der DB (für Anzeige in der App)."""
+    path = _sqlite_db_path()
+    if path:
+        data_dir = path.parent.resolve()
+        return {"data_dir": str(data_dir), "database": "sqlite"}
+    return {"data_dir": None, "database": "other"}
+
+
 @router.get("/backup")
 def download_backup():
     """DB als Datei herunterladen (nur bei SQLite)."""

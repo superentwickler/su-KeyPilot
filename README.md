@@ -38,7 +38,7 @@ Credential management (passwords, SSH keys, API keys) with a **built-in crypto c
 
 - **Frontend:** http://localhost (Standard Port 80; Port konfigurierbar: `FRONTEND_PORT=3000` in Projektroot-`.env` oder Umgebung, dann http://localhost:3000)
 - **Backend** läuft im Container und ist unter http://localhost:8000 erreichbar (Port konfigurierbar: `BACKEND_PORT=…`). Du startest **kein** `uvicorn` auf dem Host – nur `docker compose up` reicht.
-- **Data** (DB) is stored in a Docker volume and persists across restarts.
+- **Data** (DB) liegt im Projektordner `backend/data/` – überlebt Rebuilds und Updates; kein Backup vor `docker compose up --build` nötig.
 - **Ollama** (local LLM): Usually runs on the host. In the container, `OLLAMA_BASE_URL=http://host.docker.internal:11434` is set (Mac/Windows). On Linux, set the host IP if needed, e.g. `OLLAMA_BASE_URL=http://172.17.0.1:11434`.
 
 Stop: `./scripts/stop-docker.sh` or `docker compose down`.
@@ -53,25 +53,26 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 
 Frontend changes still require rebuilding the frontend container (or run the frontend locally with `npm run dev` and use the running backend container).
 
-**Which DB does Docker use?** By default its **own** DB in volume `keypilot-data` – **not** the file `backend/data/keypilot.db` on your machine. To use the same DB as local runs, see [Docker: same DB as local](#docker-same-db-as-local).
+**Which DB does Docker use?** Standardmäßig **`backend/data/keypilot.db`**. Rebuilds und Updates ändern die DB nicht. **Nicht** `docker compose down -v` verwenden.
 
-Backup: `./scripts/backup.sh [directory]` (copies the DB; from Docker, copies from the container; default target: `./backups`). Details and encryption: [docs/BACKUP.md](docs/BACKUP.md).
-
-### Docker: same DB as local
-
-To have the backend container use the **same** SQLite file as when running locally (`backend/data/keypilot.db`), override the volume (only when Docker is stopped and the file is not in use by a local process):
+**DB-Speicherort selbst wählen (z. B. iCloud, OneDrive):** In einer `.env` im Projektroot oder als Umgebungsvariable:
 
 ```bash
-# Once: create directory
-mkdir -p backend/data
+# Beispiel: eigener Ordner
+KEYPILOT_DATA_DIR=/Users/deinname/Daten/KeyPilot
 
-# In docker-compose.yml, for the backend service under volumes replace:
-#   - keypilot-data:/app/data
-# with:
-#   - ./backend/data:/app/data
+# Beispiel: iCloud (macOS) – Pfad anpassen
+KEYPILOT_DATA_DIR=/Users/deinname/Library/Mobile Documents/com~apple~CloudDocs/KeyPilot
+
+# Beispiel: OneDrive (Windows) – Pfad anpassen
+# KEYPILOT_DATA_DIR=C:\Users\deinname\OneDrive\KeyPilot
 ```
 
-Then the DB lives in the project folder and is the **same** for local and Docker.
+Dann `docker compose up -d` – die DB liegt in dem Ordner. **Hinweis iCloud/OneDrive:** Während die App läuft, kann Sync die geöffnete SQLite-Datei beschreiben und zu Korruption führen. Besser: DB im normalen Ordner lassen und nur **Backups** in den Cloud-Ordner kopieren (z. B. mit `./scripts/backup.sh ~/Library/Mobile\ Documents/.../KeyPilot`). Wenn du die DB trotzdem in der Cloud ablegst: App beim Sync möglichst stoppen.
+
+**In der App:** Beim ersten Start (Unseal-Seite) erscheint ein Hinweis mit dem aktuellen Speicherort; er ist mit „Ausblenden“ abschaltbar. Unter **Vault → Open vault (Unseal)** findest du dauerhaft die Karte **Daten-Speicherort** mit dem angezeigten Pfad und wie du ihn änderst (Docker: `KEYPILOT_DATA_DIR`; lokal: Ordner `backend/data`). Den Speicherort wählst du über die Konfiguration (nicht in der App), siehe oben.
+
+Backup: `./scripts/backup.sh [directory]` (Standard-Ziel: `./backups`). Details: [docs/BACKUP.md](docs/BACKUP.md).
 
 ---
 
@@ -154,7 +155,6 @@ Open http://localhost:5173 (oder den in `frontend/.env` gesetzten Port, siehe `f
 
 **First run – Master key:** There is no default key. On first “Open vault (Unseal)” you choose a secure password – that becomes your master key. Remember it; without it, stored secrets cannot be decrypted after a restart. Then: manage credentials or use the Chat (AI).
 
-**Reset vault:** If you forgot the master key or want to start over: on the Unseal page, scroll to “Reset vault”. Type **RESET** and confirm – all credentials and the salt are removed; on next open you choose a new master key.
 
 **Backup:** `./scripts/backup.sh` backs up the local DB; restore with `./scripts/restore.sh <file.db>`. See [docs/BACKUP.md](docs/BACKUP.md) for encryption and the two-key model.
 

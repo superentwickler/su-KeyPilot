@@ -8,4 +8,4 @@ if ! docker info &>/dev/null; then
 fi
 echo "Stopping KeyPilot Docker…"
 docker compose down
-echo "Done. Data remains in volume keypilot-data."
+echo "Done. Data remains in backend/data/."

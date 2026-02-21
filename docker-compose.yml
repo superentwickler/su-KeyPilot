@@ -11,7 +11,8 @@ services:
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     volumes:
-      - keypilot-data:/app/data
+      # Speicherort der DB auf dem Host (Standard: ./backend/data). Z.B. iCloud/OneDrive-Ordner möglich – siehe README.
+      - "${KEYPILOT_DATA_DIR:-./backend/data}:/app/data"
     environment:
       - DATABASE_URL=sqlite+aiosqlite:///./data/keypilot.db
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
@@ -28,6 +29,3 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
-
-volumes:
-  keypilot-data:
