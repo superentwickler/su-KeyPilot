@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react"
 import { Link, useNavigate, useLocation } from "react-router-dom"
-import { Key, List, MessageSquare, Lock, Download } from "lucide-react"
+import { Key, List, MessageSquare, Lock, Download, Moon, Sun } from "lucide-react"
 import { Button } from "./ui/button"
 import { useVaultSealed } from "../hooks/useVaultSealed"
+import { useTheme } from "../context/ThemeContext"
 import { seal as sealApi, downloadBackup } from "../api/client"
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const { sealed, loading, backendUnreachable, refresh } = useVaultSealed()
+  const { theme, toggleTheme } = useTheme()
   const navigate = useNavigate()
   const location = useLocation()
   const isUnsealPage = location.pathname === "/unseal"
@@ -90,9 +92,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
   if (sealed && isUnsealPage) {
     return (
       <div className="min-h-screen flex flex-col">
-        <header className="border-b bg-card px-4 py-3">
-          <span className="font-semibold text-lg">KeyPilot</span>
-          <span className="ml-2 text-sm text-muted-foreground">– Vault sealed</span>
+        <header className="border-b bg-card px-4 py-3 flex items-center justify-between">
+          <span>
+            <span className="font-semibold text-lg">KeyPilot</span>
+            <span className="ml-2 text-sm text-muted-foreground">– Vault sealed</span>
+          </span>
+          <Button variant="ghost" size="sm" onClick={toggleTheme} title={theme === "dark" ? "Light mode" : "Dark mode"}>
+            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </Button>
         </header>
         <main className="flex-1 p-6">{children}</main>
         <footer className="border-t py-1.5 px-4 text-center text-xs text-muted-foreground">
@@ -109,7 +116,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Link to="/" className="font-semibold text-lg">
           KeyPilot
         </Link>
-        <nav className="flex gap-2">
+        <nav className="flex gap-2 flex-1">
           <Link to="/">
             <Button variant="ghost" size="sm">
               <List className="mr-1 h-4 w-4" />
@@ -135,6 +142,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <Button variant="ghost" size="sm" onClick={handleSeal} disabled={sealing} title="Seal vault">
             <Lock className="mr-1 h-4 w-4" />
             {sealing ? "…" : "Seal vault"}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={toggleTheme} title={theme === "dark" ? "Light mode" : "Dark mode"}>
+            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>
         </nav>
       </header>

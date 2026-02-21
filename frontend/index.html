@@ -6,6 +6,13 @@
     <title>KeyPilot</title>
   </head>
   <body>
+    <script>
+      (function () {
+        var s = localStorage.getItem("keypilot-theme");
+        var dark = s === "dark" || (!s && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        if (dark) document.documentElement.classList.add("dark");
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
