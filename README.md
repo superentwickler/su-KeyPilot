@@ -1,6 +1,6 @@
 # KeyPilot
 
-AI-assisted credential management (passwords, SSH keys, API keys) with a **built-in crypto container** (master key, seal/unseal) and **local LLM** (Ollama).
+Credential management (passwords, SSH keys, API keys) with a **built-in crypto container** (master key, seal/unseal) and **local LLM** (Ollama) an AI-assisted 
 
 **License:** [MIT](LICENSE) – free to use, modify, and distribute.
 
@@ -104,7 +104,7 @@ OLLAMA_MODEL=llama3.2
 
 - **Terminal 1:** `./scripts/start-local.sh backend`
 - **Terminal 2:** `./scripts/start-local.sh frontend`
-- **Browser:** http://localhost:5173
+- **Browser:** http://localhost:5173 (Port konfigurierbar: `frontend/.env` mit `FRONTEND_PORT=…`, siehe `frontend/.env.example`)
 
 **Terminal 1 – Backend** (from `backend`):
 
@@ -139,7 +139,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173.
+Open http://localhost:5173 (oder den in `frontend/.env` gesetzten Port, siehe `frontend/.env.example`).
 
 **First run – Master key:** There is no default key. On first “Open vault (Unseal)” you choose a secure password – that becomes your master key. Remember it; without it, stored secrets cannot be decrypted after a restart. Then: manage credentials or use the Chat (AI).
 

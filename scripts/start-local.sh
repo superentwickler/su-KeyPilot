@@ -20,7 +20,15 @@ run_backend() {
 }
 
 run_frontend() {
-  echo "Starting frontend (port 5173)…"
+  FRONTEND_PORT="${FRONTEND_PORT:-5173}"
+  if [ -f "$ROOT/frontend/.env" ]; then
+    set -a
+    # shellcheck source=/dev/null
+    . "$ROOT/frontend/.env"
+    set +a
+    FRONTEND_PORT="${FRONTEND_PORT:-5173}"
+  fi
+  echo "Starting frontend (port $FRONTEND_PORT)…"
   cd "$ROOT/frontend"
   if [ ! -d node_modules ]; then
     echo "No node_modules. Running npm install…"
@@ -38,7 +46,9 @@ case "${1:-}" in
     echo "Terminal 1: $0 backend"
     echo "Terminal 2: $0 frontend"
     echo ""
-    echo "Then open: http://localhost:5173"
+    p="${FRONTEND_PORT:-5173}"
+    [ -f "$ROOT/frontend/.env" ] && set -a && . "$ROOT/frontend/.env" && set +a && p="${FRONTEND_PORT:-5173}"
+    echo "Then open: http://localhost:$p"
     exit 0
     ;;
 esac
