@@ -20,16 +20,28 @@ def _encrypt_field(container, value: str) -> str:
     return container.encrypt(value.strip())
 
 
+def _looks_like_ciphertext(value: str) -> bool:
+    """Heuristic: our ciphertext is base64, typically long and no spaces."""
+    s = value.strip()
+    if len(s) < 24:
+        return False
+    allowed = set("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=")
+    return all(c in allowed for c in s) and " " not in s
+
+
 def _decrypt_field(container, value: str) -> tuple[str, bool]:
     """
     Decrypt name/username from DB. Returns (plaintext, was_legacy).
-    If decryption fails (legacy plaintext), returns (value as-is, True).
+    On success: (decrypted, False). Legacy plaintext: (value as-is, True) for migration.
+    When value looks like ciphertext but decrypt fails: ("[unreadable]", False) – never expose ciphertext in the UI.
     """
     if not value or not value.strip():
         return "", False
     try:
         return container.decrypt(value), False
     except Exception:
+        if _looks_like_ciphertext(value):
+            return "[unreadable]", False
         return value, True
 
 
