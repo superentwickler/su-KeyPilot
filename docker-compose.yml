@@ -15,6 +15,7 @@ services:
       - "${KEYPILOT_DATA_DIR:-./backend/data}:/app/data"
     environment:
       - DATABASE_URL=sqlite+aiosqlite:///./data/keypilot.db
+      - KEYPILOT_DATA_DIR=${KEYPILOT_DATA_DIR:-}
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.2}
     extra_hosts:

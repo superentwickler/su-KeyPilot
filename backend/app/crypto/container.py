@@ -25,11 +25,19 @@ class CryptoContainer:
     def is_sealed(self) -> bool:
         return self._sealed
 
-    def unseal(self, master_key: str, salt: Optional[bytes] = None) -> bytes:
+    KEY_CHECK_PLAINTEXT = "keypilot-vault-ok"
+
+    def unseal(
+        self,
+        master_key: str,
+        salt: Optional[bytes] = None,
+        key_check_b64: Optional[str] = None,
+    ) -> bytes:
         """
         Master-Key (z. B. vom User eingegeben) -> Container ist nutzbar.
-        salt: persistent gespeicherter Salt (z. B. aus DB). Beim ersten Mal None -> neuer Salt wird erzeugt.
-        Returns: Salt (neu erzeugt oder gleich dem übergebenen); beim ersten Unseal in DB speichern.
+        salt: persistent (z. B. aus DB). Beim ersten Mal None -> neuer Salt.
+        key_check_b64: wenn gesetzt, wird geprüft ob der Key den gespeicherten Check entschlüsselt; sonst bleibt Vault zu.
+        Returns: Salt (neu oder übergeben).
         """
         if salt is None:
             salt = generate_salt()
@@ -37,6 +45,15 @@ class CryptoContainer:
         key = derive_key(key_material, salt, length=32)
         self._aes = AESGCM(key)
         self._sealed = False
+        if key_check_b64:
+            try:
+                dec = self.decrypt(key_check_b64)
+                if dec != self.KEY_CHECK_PLAINTEXT:
+                    self.seal()
+                    raise ValueError("Wrong master key")
+            except Exception:
+                self.seal()
+                raise ValueError("Wrong master key")
         return salt
 
     def seal(self) -> None:

@@ -1,6 +1,6 @@
 # Vault: Unseal / Seal / Status / Reset
 import base64
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,6 +10,12 @@ from app.db.models import VaultMeta, Credential
 from app.models.schemas import UnsealRequest, UnsealResponse, VaultStatusResponse
 
 router = APIRouter(prefix="/vault", tags=["vault"])
+
+
+async def _get_meta(db_session: AsyncSession, key: str) -> str | None:
+    r = await db_session.execute(select(VaultMeta).where(VaultMeta.key == key))
+    row = r.scalar_one_or_none()
+    return row.value if row else None
 
 
 @router.get("/status", response_model=VaultStatusResponse)
@@ -24,20 +30,26 @@ async def unseal(req: UnsealRequest, db: AsyncSession = Depends(get_db)):
     if not container.is_sealed:
         return UnsealResponse()
 
-    # Salt aus DB laden oder None (erster Unseal)
-    salt_b64: str | None = None
-    r = await db.execute(select(VaultMeta).where(VaultMeta.key == "kdf_salt"))
-    row = r.scalar_one_or_none()
-    if row:
-        salt_b64 = row.value
+    salt_b64 = await _get_meta(db, "kdf_salt")
+    key_check_b64 = await _get_meta(db, "key_check")
     salt = base64.b64decode(salt_b64) if salt_b64 else None
 
-    new_salt = container.unseal(req.master_key, salt)
+    try:
+        new_salt = container.unseal(req.master_key, salt, key_check_b64)
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
 
-    # Beim ersten Mal Salt in DB speichern
     if salt is None:
-        meta = VaultMeta(key="kdf_salt", value=base64.b64encode(new_salt).decode("ascii"))
-        db.add(meta)
+        meta_salt = VaultMeta(key="kdf_salt", value=base64.b64encode(new_salt).decode("ascii"))
+        db.add(meta_salt)
+        check_cipher = container.encrypt(container.KEY_CHECK_PLAINTEXT)
+        meta_check = VaultMeta(key="key_check", value=check_cipher)
+        db.add(meta_check)
+        await db.commit()
+    elif not key_check_b64:
+        check_cipher = container.encrypt(container.KEY_CHECK_PLAINTEXT)
+        meta_check = VaultMeta(key="key_check", value=check_cipher)
+        db.add(meta_check)
         await db.commit()
 
     return UnsealResponse()

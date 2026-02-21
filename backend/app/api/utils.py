@@ -33,12 +33,21 @@ def _sqlite_db_path() -> Path | None:
 
 @router.get("/info")
 def app_info():
-    """Aktueller Speicherort der DB (für Anzeige in der App)."""
+    """Aktueller Speicherort der DB (für Anzeige in der App). Bei Docker: Host-Pfad aus KEYPILOT_DATA_DIR."""
     path = _sqlite_db_path()
     if path:
-        data_dir = path.parent.resolve()
-        return {"data_dir": str(data_dir), "database": "sqlite"}
-    return {"data_dir": None, "database": "other"}
+        resolved = path.resolve()
+        data_dir = resolved.parent
+        db_path = str(resolved)
+        host_data_dir = os.environ.get("KEYPILOT_DATA_DIR", "").strip()
+        if host_data_dir:
+            db_path = os.path.normpath(os.path.join(host_data_dir, "keypilot.db"))
+        return {
+            "data_dir": str(data_dir),
+            "db_path": db_path,
+            "database": "sqlite",
+        }
+    return {"data_dir": None, "db_path": None, "database": "other"}
 
 
 @router.get("/backup")

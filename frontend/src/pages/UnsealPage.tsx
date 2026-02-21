@@ -17,13 +17,17 @@ export function UnsealPage() {
   const [restoring, setRestoring] = useState(false)
   const [restoreMessage, setRestoreMessage] = useState("")
   const [fileInputKey, setFileInputKey] = useState(0)
-  const [dataDir, setDataDir] = useState<string | null>(null)
+  const [appInfo, setAppInfo] = useState<{
+    data_dir: string | null
+    db_path: string | null
+    database: string
+  }>({ data_dir: null, db_path: null, database: "other" })
   const [hintDismissed, setHintDismissed] = useState(() => !!localStorage.getItem(HINT_DISMISSED_KEY))
   const navigate = useNavigate()
   const { refresh } = useVaultSealed()
 
   useEffect(() => {
-    getAppInfo().then((info) => setDataDir(info.data_dir))
+    getAppInfo().then(setAppInfo)
   }, [])
 
   const handleUnseal = async (e: React.FormEvent) => {
@@ -67,12 +71,12 @@ export function UnsealPage() {
 
   return (
     <div className="max-w-md mx-auto space-y-6">
-      {dataDir && !hintDismissed && (
+      {appInfo.db_path && !hintDismissed && (
         <div className="rounded-lg border bg-muted/50 px-4 py-3 text-sm text-muted-foreground flex items-start justify-between gap-2">
           <span>
-            <strong className="text-foreground">Data storage location:</strong> {dataDir}
+            <strong className="text-foreground">Database in use:</strong> <code className="text-xs break-all">{appInfo.db_path}</code>
             <br />
-            Configurable: Docker/Web server <code className="text-xs">KEYPILOT_DATA_DIR</code> in .env in the project root (e.g. iCloud/OneDrive folder); local: <code className="text-xs">backend/data</code> folder. See README.
+            Set via <code className="text-xs">KEYPILOT_DATA_DIR</code> (Docker) or <code className="text-xs">DATABASE_URL</code> (local). See README.
           </span>
           <Button variant="ghost" size="sm" onClick={dismissHint} className="shrink-0">
             Dismiss
@@ -82,11 +86,16 @@ export function UnsealPage() {
       <Card>
         <CardHeader>
           <CardTitle>Open vault (Unseal)</CardTitle>
+          {appInfo.db_path && (
+            <p className="text-xs text-muted-foreground font-mono bg-muted/50 px-2 py-1.5 rounded break-all mb-2">
+              Database: {appInfo.db_path}
+            </p>
+          )}
           <p className="text-sm text-muted-foreground">
-            <strong>First time?</strong> There is no default key – choose a secure password now. That becomes your master key. Remember it; without it you cannot decrypt stored secrets after a restart.
+            <strong>First time?</strong> Choose a secure password – that becomes your master key. Remember it; without it you cannot decrypt stored secrets.
           </p>
           <p className="text-sm text-muted-foreground mt-2">
-            The key is never stored on disk, only kept in memory.
+            <strong>Already use this vault?</strong> Enter the master key you set when you first opened it. The key is never stored on disk.
           </p>
         </CardHeader>
         <CardContent>
@@ -140,27 +149,6 @@ export function UnsealPage() {
               {restoreMessage}
             </p>
           )}
-        </CardContent>
-      </Card>
-
-      <Card className="border-muted">
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">Data storage location</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Where the database (passwords, vault) is stored. Configurable via configuration – not in the app.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {dataDir ? (
-            <p className="text-sm font-mono bg-muted px-2 py-1.5 rounded break-all">{dataDir}</p>
-          ) : (
-            <p className="text-sm text-muted-foreground">Not available (e.g. with PostgreSQL).</p>
-          )}
-          <p className="text-xs text-muted-foreground">
-            <strong>Docker / Web server:</strong> <code>KEYPILOT_DATA_DIR</code> in .env in the project root (e.g. iCloud/OneDrive folder).
-            <br />
-            <strong>Local:</strong> <code>backend/data</code> folder in the project. See README.
-          </p>
         </CardContent>
       </Card>
     </div>

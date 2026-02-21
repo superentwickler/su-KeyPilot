@@ -109,9 +109,13 @@ export async function generatePassword(): Promise<string> {
 }
 
 /** Speicherort der DB (für Hinweis/Anzeige in der App). */
-export async function getAppInfo(): Promise<{ data_dir: string | null; database: string }> {
+export async function getAppInfo(): Promise<{
+  data_dir: string | null
+  db_path: string | null
+  database: string
+}> {
   const r = await fetch(`${BASE}/utils/info`)
-  if (!r.ok) return { data_dir: null, database: "other" }
+  if (!r.ok) return { data_dir: null, db_path: null, database: "other" }
   return r.json()
 }
 
