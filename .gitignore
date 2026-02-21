@@ -1,0 +1,26 @@
+# Env / secrets (keep .env.example)
+.env
+backend/.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Node
+node_modules/
+
+# Build / cache
+dist/
+.vite/
+*.local
+
+# Runtime data
+backend/data/*.db
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store

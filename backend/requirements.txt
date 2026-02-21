@@ -1,0 +1,20 @@
+# KeyPilot Backend
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# Crypto
+cryptography>=42.0.0
+
+# Database (SQLite Standard; für PostgreSQL asyncpg zusätzlich nutzbar)
+sqlalchemy>=2.0.25
+greenlet>=3.0.0
+aiosqlite>=0.19.0
+asyncpg>=0.29.0
+
+# LLM (Ollama) – nur httpx, kein LangChain
+httpx>=0.26.0
+
+# Utils (.env laden)
+python-dotenv>=1.0.0

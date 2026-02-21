@@ -1,0 +1,28 @@
+# KeyPilot – Installation mit Docker Compose
+# Nach dem Start: http://localhost (Frontend), Backend intern auf Port 8000
+
+services:
+  backend:
+    build: ./backend
+    container_name: keypilot-backend
+    volumes:
+      - keypilot-data:/app/data
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:///./data/keypilot.db
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.2}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: keypilot-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  keypilot-data:

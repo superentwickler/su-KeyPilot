@@ -1,0 +1,17 @@
+# Entwicklung: Code liegt auf dem Host, wird in die Container gemountet.
+# Backend läuft mit --reload (Änderungen sofort sichtbar).
+# Start mit: docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+# Dann ggf. Frontend neu bauen nur bei Änderungen an package.json / Dockerfile.
+
+services:
+  backend:
+    volumes:
+      - ./backend/app:/app/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Frontend: Quellcode mounten, dann bei Änderungen im Frontend einmal rebuild:
+  # docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build frontend
+  # Oder für Live-Reload Frontend lokal mit "npm run dev" starten und auf localhost:5173 gehen
+  # (Backend läuft weiter im Container, VITE proxy auf Backend müsste auf localhost:8000 zeigen).
+  frontend:
+    build: ./frontend
