@@ -1,6 +1,6 @@
 # KeyPilot
 
-Credential management (passwords, SSH keys, API keys) with a **built-in crypto container** (master key, seal/unseal) and **local LLM** (Ollama) an AI-assisted 
+Credential management (passwords, SSH keys, API keys) with a **built-in crypto container** (master key, seal/unseal) and **local LLM** (Ollama) for AI-assisted chat.
 
 **License:** [MIT](LICENSE) – free to use, modify, and distribute.
 
@@ -15,13 +15,13 @@ Credential management (passwords, SSH keys, API keys) with a **built-in crypto c
 
 **Without Docker:** Open two terminals → `./scripts/start-local.sh backend` and `./scripts/start-local.sh frontend` → http://localhost:5173 (see [Option 2: Manual](#option-2-manual-no-docker)).
 
-**Welche .env für was?**
+**Which .env for what?**
 
-| Datei | Wann genutzt | Nicht genutzt bei |
-|-------|--------------|--------------------|
-| **Projektroot `.env`** (neben `docker-compose.yml`) | Nur bei **Docker** (`docker compose`). Steuert z. B. `KEYPILOT_DATA_DIR`, `FRONTEND_PORT`, `BACKEND_PORT`, `OLLAMA_*`. Siehe `.env.example` im Projektroot. | Lokaler Aufruf (Backend/Frontend lesen diese Datei nicht.) |
-| **`backend/.env`** | Nur bei **lokalen** Backend-Starts (`uvicorn`, `./scripts/start-local.sh backend`). Steuert z. B. `DATABASE_URL`, `OLLAMA_*`. Siehe `backend/.env.example`. | Docker (Container nutzt feste Werte bzw. Projektroot-.env.) |
-| **`frontend/.env`** | Nur bei **lokalen** Frontend-Starts (`npm run dev`, `./scripts/start-local.sh frontend`). Steuert z. B. `FRONTEND_PORT`. Siehe `frontend/.env.example`. | Docker (Port über Projektroot-.env.) |
+| File | When used | Not used for |
+|------|------------|--------------|
+| **Project root `.env`** (next to `docker-compose.yml`) | Only with **Docker** (`docker compose`). Controls e.g. `KEYPILOT_DATA_DIR`, `FRONTEND_PORT`, `BACKEND_PORT`, `OLLAMA_*`. See `.env.example` in project root. | Local run (backend/frontend do not read this file.) |
+| **`backend/.env`** | Only with **local** backend starts (`uvicorn`, `./scripts/start-local.sh backend`). Controls e.g. `DATABASE_URL`, `OLLAMA_*`. See `backend/.env.example`. | Docker (container uses fixed values or project root .env.) |
+| **`frontend/.env`** | Only with **local** frontend starts (`npm run dev`, `./scripts/start-local.sh frontend`). Controls e.g. `FRONTEND_PORT`. See `frontend/.env.example`. | Docker (port via project root .env.) |
 
 ---
 
@@ -29,24 +29,24 @@ Credential management (passwords, SSH keys, API keys) with a **built-in crypto c
 
 **Prerequisite:** Docker and Docker Compose installed.
 
-**So startest du die ganze App in Docker:**
+**How to start the whole app in Docker:**
 
-1. **Immer aus dem Projektroot** (Ordner, in dem `docker-compose.yml` liegt, z. B. `paiss`):
+1. **Always from the project root** (folder containing `docker-compose.yml`, e.g. `KeyPilot`):
    ```bash
-   cd /pfad/zu/paiss
+   cd /path/to/KeyPilot
    ./scripts/start-docker.sh
    ```
-   Oder manuell: `docker compose up -d --build`
+   Or manually: `docker compose up -d --build`
 
-2. **Lokal laufendes Backend/Frontend** (z. B. `./scripts/start-local.sh backend/frontend`): Vorher stoppen, damit Port 80 frei ist – sonst meldet Docker ggf. „port already in use“. Backend (Port 8000) wird von Docker nur intern genutzt, kollidiert also nicht mit lokalem Uvicorn.
+2. **Backend/Frontend running locally** (e.g. `./scripts/start-local.sh backend/frontend`): Stop them first so port 80 is free – otherwise Docker may report "port already in use". Backend (port 8000) is only used internally by Docker, so it won't conflict with local Uvicorn.
 
-3. **In Docker Desktop:** Unter **Containers** siehst du die Container **keypilot-backend** und **keypilot-frontend**. Der Projektname ist der Ordnername (z. B. `paiss`). Beide müssen „Running“ sein.
+3. **In Docker Desktop:** Under **Containers** you'll see **keypilot-backend** and **keypilot-frontend**. The project name is the folder name (e.g. `KeyPilot`). Both must be "Running".
 
-4. **Wenn „backend nicht vorhanden“ oder Fehler:** Status prüfen mit `docker compose ps`, Backend-Logs mit `docker compose logs backend`. Wenn der Backend-Container fehlt oder beendet ist: `docker compose up -d --build` erneut aus dem Projektroot ausführen.
+4. **If "backend not found" or errors:** Check status with `docker compose ps`, backend logs with `docker compose logs backend`. If the backend container is missing or stopped, run `docker compose up -d --build` again from the project root.
 
-- **Frontend:** http://localhost (Standard Port 80; Port konfigurierbar: `FRONTEND_PORT=3000` in Projektroot-`.env` oder Umgebung, dann http://localhost:3000)
-- **Backend** läuft im Container und ist unter http://localhost:8000 erreichbar (Port konfigurierbar: `BACKEND_PORT=…`). Du startest **kein** `uvicorn` auf dem Host – nur `docker compose up` reicht.
-- **Data** (DB) liegt im Projektordner `backend/data/` – überlebt Rebuilds und Updates; kein Backup vor `docker compose up --build` nötig.
+- **Frontend:** http://localhost (default port 80; configurable: `FRONTEND_PORT=3000` in project root `.env` or environment, then http://localhost:3000)
+- **Backend** runs in the container and is reachable at http://localhost:8000 (configurable: `BACKEND_PORT=…`). You don't start `uvicorn` on the host – only `docker compose up` is needed.
+- **Data** (DB) is stored in project folder `backend/data/` – survives rebuilds and updates; no backup before `docker compose up --build` required.
 - **Ollama** (local LLM): Usually runs on the host. In the container, `OLLAMA_BASE_URL=http://host.docker.internal:11434` is set (Mac/Windows). On Linux, set the host IP if needed, e.g. `OLLAMA_BASE_URL=http://172.17.0.1:11434`.
 
 Stop: `./scripts/stop-docker.sh` or `docker compose down`.
@@ -61,32 +61,32 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 
 Frontend changes still require rebuilding the frontend container (or run the frontend locally with `npm run dev` and use the running backend container).
 
-**Which DB does Docker use?** Standardmäßig **`backend/data/keypilot.db`**. Rebuilds und Updates ändern die DB nicht. **Nicht** `docker compose down -v` verwenden.
+**Which DB does Docker use?** By default **`backend/data/keypilot.db`**. Rebuilds and updates don't change the DB. **Do not** use `docker compose down -v`.
 
-**DB-Speicherort selbst wählen (z. B. iCloud, OneDrive):** In einer `.env` im Projektroot oder als Umgebungsvariable:
+**Choose DB location yourself (e.g. iCloud, OneDrive):** In a `.env` in the project root or as an environment variable:
 
 ```bash
-# Beispiel: eigener Ordner
-KEYPILOT_DATA_DIR=/Users/deinname/Daten/KeyPilot
+# Example: custom folder
+KEYPILOT_DATA_DIR=/Users/yourname/Data/KeyPilot
 
-# Beispiel: iCloud (macOS) – Pfad anpassen
-KEYPILOT_DATA_DIR=/Users/deinname/Library/Mobile Documents/com~apple~CloudDocs/KeyPilot
+# Example: iCloud (macOS) – adjust path
+KEYPILOT_DATA_DIR=/Users/yourname/Library/Mobile Documents/com~apple~CloudDocs/KeyPilot
 
-# Beispiel: OneDrive (Windows) – Pfad anpassen
-# KEYPILOT_DATA_DIR=C:\Users\deinname\OneDrive\KeyPilot
+# Example: OneDrive (Windows) – adjust path
+# KEYPILOT_DATA_DIR=C:\Users\yourname\OneDrive\KeyPilot
 ```
 
-Dann `docker compose up -d` – die DB liegt in dem Ordner. **Hinweis iCloud/OneDrive:** Während die App läuft, kann Sync die geöffnete SQLite-Datei beschreiben und zu Korruption führen. Besser: DB im normalen Ordner lassen und nur **Backups** in den Cloud-Ordner kopieren (z. B. mit `./scripts/backup.sh ~/Library/Mobile\ Documents/.../KeyPilot`). Wenn du die DB trotzdem in der Cloud ablegst: App beim Sync möglichst stoppen.
+Then `docker compose up -d` – the DB is stored in that folder. **Note on iCloud/OneDrive:** While the app is running, sync may write to the open SQLite file and cause corruption. Better: keep the DB in a normal folder and only copy **backups** to the cloud folder (e.g. `./scripts/backup.sh ~/Library/Mobile\ Documents/.../KeyPilot`). If you still put the DB in the cloud, stop the app during sync if possible.
 
-**In der App:** Beim ersten Start (Unseal-Seite) erscheint ein Hinweis mit dem aktuellen Speicherort; er ist mit „Ausblenden“ abschaltbar. Unter **Vault → Open vault (Unseal)** findest du dauerhaft die Karte **Daten-Speicherort** mit dem angezeigten Pfad und wie du ihn änderst (Docker: `KEYPILOT_DATA_DIR`; lokal: Ordner `backend/data`). Den Speicherort wählst du über die Konfiguration (nicht in der App), siehe oben.
+**In the app:** On first start (Unseal page) a notice with the current database path appears; it can be dismissed. Under **Vault → Open vault (Unseal)** the database path is shown and how to change it (Docker: `KEYPILOT_DATA_DIR`; local: `backend/data` folder). You set the location via configuration (not in the app), see above.
 
-Backup: `./scripts/backup.sh [directory]` (Standard-Ziel: `./backups`). Details: [docs/BACKUP.md](docs/BACKUP.md).
+Backup: `./scripts/backup.sh [directory]` (default target: `./backups`). Details: [docs/BACKUP.md](docs/BACKUP.md).
 
 ---
 
 ### Option 2: Manual (no Docker)
 
-**Nur wenn du ohne Docker arbeitest:** Backend und Frontend startest du selbst (z. B. `uvicorn` und `npm run dev`). Bei Docker (Option 1) brauchst du diese Befehle nicht.
+**Only if you're not using Docker:** You start backend and frontend yourself (e.g. `uvicorn` and `npm run dev`). With Docker (Option 1) you don't need these commands.
 
 KeyPilot runs fully **without Docker**: backend (Python/FastAPI) and frontend (React/Vite) are started locally; the DB is a local SQLite file (`backend/data/keypilot.db`).
 
@@ -124,7 +124,7 @@ OLLAMA_MODEL=llama3.2
 
 - **Terminal 1:** `./scripts/start-local.sh backend`
 - **Terminal 2:** `./scripts/start-local.sh frontend`
-- **Browser:** http://localhost:5173 (Port konfigurierbar: `frontend/.env` mit `FRONTEND_PORT=…`, siehe `frontend/.env.example`)
+- **Browser:** http://localhost:5173 (port configurable in `frontend/.env` with `FRONTEND_PORT=…`, see `frontend/.env.example`)
 
 **Terminal 1 – Backend** (from `backend`):
 
@@ -159,7 +159,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173 (oder den in `frontend/.env` gesetzten Port, siehe `frontend/.env.example`).
+Open http://localhost:5173 (or the port set in `frontend/.env`, see `frontend/.env.example`).
 
 **First run – Master key:** There is no default key. On first “Open vault (Unseal)” you choose a secure password – that becomes your master key. Remember it; without it, stored secrets cannot be decrypted after a restart. Then: manage credentials or use the Chat (AI).
 
@@ -181,9 +181,9 @@ Without Ollama running, the Chat will not work (API returns an error).
 
 **Chat still not working?**
 
-1. **Backend in Docker:** Inside the container, `localhost` is the container itself. Set in **Projektroot `.env`** (nicht `backend/.env`): Mac/Windows: `OLLAMA_BASE_URL=http://host.docker.internal:11434`; Linux: `OLLAMA_BASE_URL=http://172.17.0.1:11434` (oder Host-IP).
-2. **Model:** Default ist `OLLAMA_MODEL=llama3.2`. Modell ziehen: `ollama pull llama3.2` bzw. `ollama list`. Anderes Modell: **Docker** → Projektroot `.env`; **lokal** → `backend/.env`.
-3. **Check:** In the Chat tab, send a message; if Ollama is unreachable or the model is missing, the error text will now show the cause (e.g. “Cannot reach Ollama at …” or “model not found”).
+1. **Backend in Docker:** Inside the container, `localhost` is the container itself. Set in **project root `.env`** (not `backend/.env`): Mac/Windows: `OLLAMA_BASE_URL=http://host.docker.internal:11434`; Linux: `OLLAMA_BASE_URL=http://172.17.0.1:11434` (or host IP).
+2. **Model:** Default is `OLLAMA_MODEL=llama3.2`. Pull model: `ollama pull llama3.2` or `ollama list`. Different model: **Docker** → project root `.env`; **local** → `backend/.env`.
+3. **Check:** In the Chat tab, send a message; if Ollama is unreachable or the model is missing, the error text will show the cause (e.g. “Cannot reach Ollama at …” or “model not found”).
 
 ## Scripts (`scripts/`)
 
