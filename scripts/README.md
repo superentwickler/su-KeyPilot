@@ -26,4 +26,6 @@ Use two terminals: first `./scripts/start-local.sh backend`, then `./scripts/sta
 | **backup.sh** [dir] | Copy DB to directory (default: `./backups`); from Docker, copy from container |
 | **restore.sh** \<file.db\> | Restore DB from backup file (stop backend first) |
 
-First run: make scripts executable with `chmod +x scripts/*.sh` if needed.
+First run: make scripts executable with `chmod +x scripts/*.sh` if needed (Linux/macOS).
+
+**Windows:** The `.sh` scripts do not run in CMD/PowerShell. Use the equivalent commands in [docs/WINDOWS.md](../docs/WINDOWS.md) (Docker, backup, restore, local start).

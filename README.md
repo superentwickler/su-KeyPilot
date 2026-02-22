@@ -27,6 +27,8 @@ Credential management (passwords, SSH keys, API keys) with a **built-in crypto c
 
 **Without Docker:** Open two terminals → `./scripts/start-local.sh backend` and `./scripts/start-local.sh frontend` → http://localhost:5173 (see [Option 2: Manual](#option-2-manual-no-docker)).
 
+**Windows:** The scripts in `scripts/` are for Linux/macOS. On Windows use [docs/WINDOWS.md](docs/WINDOWS.md) (PowerShell/Docker commands and manual steps).
+
 **Which .env for what?** All options are documented in the respective `.env.example` files.
 
 | File | When used | Not used for |
@@ -206,6 +208,8 @@ Without Ollama running, the Chat will not work (API returns an error).
 | **restore.sh** \<file.db\> | Restore from backup file (stop backend first) |
 
 Run all scripts from the project root, e.g. `./scripts/start-docker.sh`. See [scripts/README.md](scripts/README.md).
+
+**Windows:** These scripts are for Linux/macOS. For PowerShell and manual commands see [docs/WINDOWS.md](docs/WINDOWS.md).
 
 ## Overview
 
