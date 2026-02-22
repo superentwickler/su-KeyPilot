@@ -2,7 +2,7 @@
 
 ## In short: back up the DB file only
 
-- **Backup = the database file** (`backend/data/keypilot.db` for SQLite).
+- **Backup = the database file** (`backend/data/keypilot.db` or your KEYPILOT_DATA_DIR).
 - It contains only: **encrypted** credentials (ciphertext) and the **salt**. The **master key** is never stored there.
 
 **Without the master key**, the DB (or a copy) is useless – everything stays encrypted.  
@@ -27,8 +27,6 @@ Recommendation: Keep the master key and backup password **separate** and secure 
 
 ### 1. Create backup
 
-**SQLite (default):**
-
 ```bash
 cd backend
 # Optionally seal vault first (clear key from memory)
@@ -38,8 +36,6 @@ openssl enc -aes-256-cbc -salt -pbkdf2 -in backup/keypilot_*.db -out backup/keyp
 # Remove unencrypted copy
 rm backup/keypilot_*.db
 ```
-
-**PostgreSQL:** Use `pg_dump` for the KeyPilot database, then encrypt the dump with OpenSSL (or GPG).
 
 ### 2. Store backup
 

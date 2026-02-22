@@ -1,4 +1,4 @@
-# Credential-API: CRUD für Passwort, SSH-Key, API-Key
+# Credential API: CRUD for passwords, SSH keys, API keys
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 

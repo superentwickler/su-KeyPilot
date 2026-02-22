@@ -1,4 +1,4 @@
-# Tabellen: Credential-Metadaten + verschlüsselte Secrets, Vault-Salt
+# Tables: credential metadata + encrypted secrets, vault salt
 from sqlalchemy import String, Text, DateTime, Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column
 from datetime import datetime
@@ -24,14 +24,14 @@ class Credential(Base):
     username: Mapped[str] = mapped_column(Text, default="")  # ciphertext, empty string if not set
     category: Mapped[str] = mapped_column(String(255), default="", index=True)
     description: Mapped[str] = mapped_column(Text, default="")
-    # Secret nur verschlüsselt (Ciphertext vom Crypto-Container)
+    # Secret stored encrypted only (ciphertext from crypto container)
     ciphertext: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(), default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(), default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 class VaultMeta(Base):
-    """Eine Zeile: Salt für Key-Ableitung (persistent). Master-Key nie speichern."""
+    """One row: salt for key derivation (persistent). Never store master key."""
     __tablename__ = "vault_meta"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)

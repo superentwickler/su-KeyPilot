@@ -8,11 +8,10 @@ python-multipart>=0.0.6
 # Crypto
 cryptography>=42.0.0
 
-# Database (SQLite Standard; für PostgreSQL asyncpg zusätzlich nutzbar)
+# Database (SQLite)
 sqlalchemy>=2.0.25
 greenlet>=3.0.0
 aiosqlite>=0.19.0
-asyncpg>=0.29.0
 
 # LLM (Ollama) – nur httpx, kein LangChain
 httpx>=0.26.0

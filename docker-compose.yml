@@ -1,6 +1,6 @@
-# KeyPilot – Installation mit Docker Compose
-# Nach dem Start: Frontend unter http://localhost (Standard Port 80, über FRONTEND_PORT änderbar)
-# Projektname in Docker Desktop: su-KeyPilot (unabhängig vom Ordner)
+# KeyPilot – Docker Compose
+# After start: frontend at http://localhost (default port 80; set FRONTEND_PORT to change).
+# Project name in Docker Desktop: su-KeyPilot.
 
 name: su-KeyPilot
 
@@ -11,11 +11,12 @@ services:
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     volumes:
-      # Speicherort der DB auf dem Host (Standard: ./backend/data). Z.B. iCloud/OneDrive-Ordner möglich – siehe README.
+      # DB location on host (default: ./backend/data). Set KEYPILOT_DATA_DIR in project root .env.
       - "${KEYPILOT_DATA_DIR:-./backend/data}:/app/data"
     environment:
-      - DATABASE_URL=sqlite+aiosqlite:///./data/keypilot.db
-      - KEYPILOT_DATA_DIR=${KEYPILOT_DATA_DIR:-}
+      # Container uses /app/data (mount point); host path for display only
+      - KEYPILOT_DATA_DIR=/app/data
+      - KEYPILOT_DATA_DIR_DISPLAY=${KEYPILOT_DATA_DIR:-./backend/data}
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.2}
     extra_hosts:

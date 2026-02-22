@@ -65,12 +65,12 @@ def seal():
 @router.post("/reset")
 async def reset(db: AsyncSession = Depends(get_db)):
     """
-    Vault komplett zurücksetzen: Container versiegeln, alle Credentials und den Salt löschen.
-    Danach beim nächsten Unseal einen neuen Master-Key wählen (wie beim ersten Start).
+    Reset vault completely: seal container, delete all credentials and salt.
+    On next unseal, choose a new master key (as on first start).
     """
     container = get_container()
     container.seal()
     await db.execute(delete(Credential))
     await db.execute(delete(VaultMeta))
     await db.commit()
-    return {"status": "reset", "message": "Vault zurückgesetzt. Beim nächsten Öffnen neuen Master-Key wählen."}
+    return {"status": "reset", "message": "Vault reset. Choose a new master key on next open."}

@@ -16,6 +16,7 @@ export function UnsealPage() {
   const [restoreFile, setRestoreFile] = useState<File | null>(null)
   const [restoring, setRestoring] = useState(false)
   const [restoreMessage, setRestoreMessage] = useState("")
+  const [restoreError, setRestoreError] = useState("")
   const [fileInputKey, setFileInputKey] = useState(0)
   const [appInfo, setAppInfo] = useState<{
     data_dir: string | null
@@ -49,7 +50,7 @@ export function UnsealPage() {
   const handleRestore = async () => {
     if (!restoreFile) return
     setRestoring(true)
-    setError("")
+    setRestoreError("")
     setRestoreMessage("")
     try {
       const res = await restoreBackup(restoreFile)
@@ -58,7 +59,7 @@ export function UnsealPage() {
       setFileInputKey((k) => k + 1)
       await refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Restore failed")
+      setRestoreError(err instanceof Error ? err.message : "Restore failed")
     } finally {
       setRestoring(false)
     }
@@ -76,7 +77,7 @@ export function UnsealPage() {
           <span>
             <strong className="text-foreground">Database in use:</strong> <code className="text-xs break-all">{appInfo.db_path}</code>
             <br />
-            Set via <code className="text-xs">KEYPILOT_DATA_DIR</code> (Docker) or <code className="text-xs">DATABASE_URL</code> (local). See README.
+            Set via <code className="text-xs">KEYPILOT_DATA_DIR</code> (Docker: project root .env; local: <code className="text-xs">backend/.env</code>, paths inside project only). See README.
           </span>
           <Button variant="ghost" size="sm" onClick={dismissHint} className="shrink-0">
             Dismiss
@@ -144,11 +145,19 @@ export function UnsealPage() {
               {restoring ? "…" : "Restore"}
             </Button>
           </div>
+          {restoreError && (
+            <p className="text-sm text-destructive bg-destructive/10 p-2 rounded">
+              {restoreError}
+            </p>
+          )}
           {restoreMessage && (
             <p className="text-sm text-muted-foreground bg-muted p-2 rounded">
               {restoreMessage}
             </p>
           )}
+          <p className="text-xs text-muted-foreground">
+            If restore fails (e.g. file in use): stop the backend, run <code className="bg-muted px-1 rounded">./scripts/restore.sh &lt;yourfile.db&gt;</code>, then start the backend again.
+          </p>
         </CardContent>
       </Card>
     </div>

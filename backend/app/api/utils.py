@@ -1,4 +1,4 @@
-# Hilfs-Endpoints: Passwort-Generator, Backup, Restore
+# Helper endpoints: password generator, backup, restore
 import os
 import secrets
 import tempfile
@@ -16,12 +16,12 @@ router = APIRouter(prefix="/utils", tags=["utils"])
 
 @router.get("/generate-password", response_model=GeneratePasswordResponse)
 def generate_password(length: int = 24):
-    """Generiert ein sicheres Passwort (URL-safe base64)."""
+    """Generate a secure password (URL-safe base64)."""
     return GeneratePasswordResponse(password=secrets.token_urlsafe(length))
 
 
 def _sqlite_db_path() -> Path | None:
-    """Pfad zur SQLite-Datei aus DATABASE_URL, oder None wenn nicht SQLite."""
+    """Path to SQLite file (from KEYPILOT_DATA_DIR / config), or None if not SQLite."""
     url = Settings().database_url
     if not url.startswith("sqlite"):
         return None
@@ -33,15 +33,16 @@ def _sqlite_db_path() -> Path | None:
 
 @router.get("/info")
 def app_info():
-    """Aktueller Speicherort der DB (für Anzeige in der App). Bei Docker: Host-Pfad aus KEYPILOT_DATA_DIR."""
+    """Current DB location (for display in app). Docker: host path via KEYPILOT_DATA_DIR_DISPLAY."""
     path = _sqlite_db_path()
     if path:
         resolved = path.resolve()
         data_dir = resolved.parent
         db_path = str(resolved)
-        host_data_dir = os.environ.get("KEYPILOT_DATA_DIR", "").strip()
-        if host_data_dir:
-            db_path = os.path.normpath(os.path.join(host_data_dir, "keypilot.db"))
+        # Display path: Docker host path, or configured KEYPILOT_DATA_DIR, or actual path
+        display_dir = os.environ.get("KEYPILOT_DATA_DIR_DISPLAY", "").strip() or (Settings().keypilot_data_dir or "").strip()
+        if display_dir:
+            db_path = os.path.normpath(os.path.join(display_dir, "keypilot.db"))
         return {
             "data_dir": str(data_dir),
             "db_path": db_path,
@@ -52,7 +53,7 @@ def app_info():
 
 @router.get("/backup")
 def download_backup():
-    """DB als Datei herunterladen (nur bei SQLite)."""
+    """Download DB as file (SQLite only)."""
     path = _sqlite_db_path()
     if not path or not path.exists():
         raise HTTPException(status_code=404, detail="Backup only available with local SQLite DB.")
@@ -67,12 +68,14 @@ def download_backup():
 @router.post("/restore")
 async def restore_backup(file: UploadFile):
     """
-    Hochgeladene Backup-Datei (.db) als aktuelle DB übernehmen.
-    Nur bei SQLite. Nach dem Restore Backend neu starten, damit die neue DB aktiv wird.
+    Replace current DB with uploaded backup (.db). SQLite only.
+    Restart the backend after restore for the new DB to take effect.
     """
     path = _sqlite_db_path()
     if not path:
         raise HTTPException(status_code=404, detail="Restore only available with local SQLite DB.")
+    # Always use absolute path so we write to the correct location (CWD-independent)
+    path = path.resolve()
     if not file.filename or not file.filename.lower().endswith(".db"):
         raise HTTPException(status_code=400, detail="Please select a .db file.")
     try:
@@ -80,15 +83,16 @@ async def restore_backup(file: UploadFile):
         if len(content) < 100:
             raise HTTPException(status_code=400, detail="File seems too small for a KeyPilot DB.")
         path.parent.mkdir(parents=True, exist_ok=True)
-        with tempfile.NamedTemporaryFile(delete=False, dir=path.parent, suffix=".db") as tmp:
+        with tempfile.NamedTemporaryFile(delete=False, dir=str(path.parent), suffix=".db") as tmp:
             tmp.write(content)
             tmp_path = tmp.name
-        os.replace(tmp_path, path)
+        os.replace(tmp_path, str(path))
     except OSError as e:
+        errmsg = str(e) if e.strerror else repr(e)
         raise HTTPException(
             status_code=500,
-            detail="Could not write file. Try stopping the backend and retrying.",
+            detail=f"Could not write to {path}. {errmsg} Stop the backend, then use: ./scripts/restore.sh <yourfile.db>",
         ) from e
     return {
-        "message": "Backup restored. Please restart the backend for the new DB to take effect.",
+        "message": f"Backup restored to {path}. Restart the backend (e.g. docker compose restart backend) so the new DB is used.",
     }

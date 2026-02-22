@@ -39,7 +39,7 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
       })
       .catch(() => {
         setBackendUnreachable(true)
-        throw new Error("Backend nicht erreichbar")
+        throw new Error("Backend unreachable")
       })
       .finally(() => setLoading(false))
   }, [])

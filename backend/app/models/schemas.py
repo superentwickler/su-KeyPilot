@@ -1,4 +1,4 @@
-# Pydantic-Schemas für API
+# Pydantic schemas for API
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
@@ -25,7 +25,7 @@ class CredentialBase(BaseModel):
 
 
 class CredentialCreate(CredentialBase):
-    secret: str  # wird verschlüsselt gespeichert, nie in Antworten
+    secret: str  # stored encrypted, never in responses
 
 
 class CredentialUpdate(BaseModel):

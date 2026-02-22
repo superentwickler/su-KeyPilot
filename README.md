@@ -2,7 +2,7 @@
 
 Credential management (passwords, SSH keys, API keys) with a **built-in crypto container** (master key, seal/unseal) and **local LLM** (Ollama) for AI-assisted chat.
 
-**License:** [MIT](LICENSE) – free to use, modify, and distribute.
+**License:** [MIT](LICENSE) – free to use, modify, and distribute. For personal and non-commercial use no further permission is needed. For commercial use please get in touch (e.g. via the repository or the maintainer listed in the license).
 
 ---
 
@@ -15,12 +15,12 @@ Credential management (passwords, SSH keys, API keys) with a **built-in crypto c
 
 **Without Docker:** Open two terminals → `./scripts/start-local.sh backend` and `./scripts/start-local.sh frontend` → http://localhost:5173 (see [Option 2: Manual](#option-2-manual-no-docker)).
 
-**Which .env for what?**
+**Which .env for what?** All options are documented in the respective `.env.example` files.
 
 | File | When used | Not used for |
 |------|------------|--------------|
 | **Project root `.env`** (next to `docker-compose.yml`) | Only with **Docker** (`docker compose`). Controls e.g. `KEYPILOT_DATA_DIR`, `FRONTEND_PORT`, `BACKEND_PORT`, `OLLAMA_*`. See `.env.example` in project root. | Local run (backend/frontend do not read this file.) |
-| **`backend/.env`** | Only with **local** backend starts (`uvicorn`, `./scripts/start-local.sh backend`). Controls e.g. `DATABASE_URL`, `OLLAMA_*`. See `backend/.env.example`. | Docker (container uses fixed values or project root .env.) |
+| **`backend/.env`** | Only with **local** backend starts. DB in `backend/data` by default; optional **KEYPILOT_DATA_DIR** only with paths inside the project. See `backend/.env.example`. | Docker (container uses project root .env for volume.) |
 | **`frontend/.env`** | Only with **local** frontend starts (`npm run dev`, `./scripts/start-local.sh frontend`). Controls e.g. `FRONTEND_PORT`. See `frontend/.env.example`. | Docker (port via project root .env.) |
 
 ---
@@ -78,7 +78,7 @@ KEYPILOT_DATA_DIR=/Users/yourname/Library/Mobile Documents/com~apple~CloudDocs/K
 
 Then `docker compose up -d` – the DB is stored in that folder. **Note on iCloud/OneDrive:** While the app is running, sync may write to the open SQLite file and cause corruption. Better: keep the DB in a normal folder and only copy **backups** to the cloud folder (e.g. `./scripts/backup.sh ~/Library/Mobile\ Documents/.../KeyPilot`). If you still put the DB in the cloud, stop the app during sync if possible.
 
-**In the app:** On first start (Unseal page) a notice with the current database path appears; it can be dismissed. Under **Vault → Open vault (Unseal)** the database path is shown and how to change it (Docker: `KEYPILOT_DATA_DIR`; local: `backend/data` folder). You set the location via configuration (not in the app), see above.
+**In the app:** On first start (Unseal page) a notice with the current database path appears; it can be dismissed. Under **Open vault (Unseal)** the database path is shown. You set the location via **KEYPILOT_DATA_DIR** (one parameter for both Docker and local), not in the app.
 
 Backup: `./scripts/backup.sh [directory]` (default target: `./backups`). Details: [docs/BACKUP.md](docs/BACKUP.md).
 
@@ -88,7 +88,7 @@ Backup: `./scripts/backup.sh [directory]` (default target: `./backups`). Details
 
 **Only if you're not using Docker:** You start backend and frontend yourself (e.g. `uvicorn` and `npm run dev`). With Docker (Option 1) you don't need these commands.
 
-KeyPilot runs fully **without Docker**: backend (Python/FastAPI) and frontend (React/Vite) are started locally; the DB is a local SQLite file (`backend/data/keypilot.db`).
+KeyPilot runs fully **without Docker**: backend (Python/FastAPI) and frontend (React/Vite) are started locally; the DB is SQLite (`keypilot.db` in **KEYPILOT_DATA_DIR**, default `backend/data`).
 
 **Prerequisites**
 
@@ -96,7 +96,7 @@ KeyPilot runs fully **without Docker**: backend (Python/FastAPI) and frontend (R
 - **Node 18+** (frontend)
 - **Ollama** with a model (e.g. `ollama run llama3.2`)
 
-**Database:** By default **SQLite** is used (file `backend/data/keypilot.db`) – no Docker required. For PostgreSQL, set `DATABASE_URL` in `backend/.env`.
+**Database:** Unset = `backend/data`. Optional **KEYPILOT_DATA_DIR** in `backend/.env`: for local runs use only paths **inside the project** (e.g. `backend/data` or `backend/mydata`); paths outside are not allowed.
 
 **Backend**
 
@@ -110,11 +110,8 @@ pip install -r requirements.txt
 Environment variables (optional, `.env` in `backend`):
 
 ```
-# Default = SQLite (no Docker)
-# DATABASE_URL=sqlite+aiosqlite:///./data/keypilot.db
-
-# Optional: PostgreSQL
-# DATABASE_URL=postgresql+asyncpg://keypilot:keypilot@localhost:5432/keypilot
+# DB directory: unset = backend/data. Local: only paths inside project (e.g. backend/data).
+# KEYPILOT_DATA_DIR=backend/data
 
 OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_MODEL=llama3.2

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { Link, useNavigate, useLocation } from "react-router-dom"
-import { Key, List, MessageSquare, Lock, Download, Moon, Sun } from "lucide-react"
+import { List, MessageSquare, Lock, Download, Moon, Sun } from "lucide-react"
 import { Button } from "./ui/button"
 import { useVaultSealed } from "../hooks/useVaultSealed"
 import { useTheme } from "../context/ThemeContext"
@@ -109,7 +109,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     )
   }
 
-  // Vault offen: volle Navigation (Credentials, Chat, Vault)
+  // Vault open: full nav (Credentials, Chat, Backup, Seal)
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b bg-card px-4 py-3 flex items-center gap-4">
@@ -127,12 +127,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <Button variant="ghost" size="sm">
               <MessageSquare className="mr-1 h-4 w-4" />
               Chat
-            </Button>
-          </Link>
-          <Link to="/unseal">
-            <Button variant="outline" size="sm">
-              <Key className="mr-1 h-4 w-4" />
-              Vault
             </Button>
           </Link>
           <Button variant="ghost" size="sm" onClick={handleBackup} disabled={backingUp} title="Download backup (DB)">

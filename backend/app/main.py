@@ -1,6 +1,5 @@
 # KeyPilot Backend – FastAPI
 import logging
-import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
@@ -10,8 +9,9 @@ from fastapi.responses import JSONResponse
 from app.config import Settings
 
 logger = logging.getLogger(__name__)
-from app.db.database import engine, Base, get_db
-from app.db import models  # noqa: F401 – Tabellen bei Base registrieren
+from app.db import database
+from app.db.database import Base, get_db, switch_to_fallback_sqlite
+from app.db import models  # noqa: F401 – register tables with Base
 from app.api import vault_router, credentials_router, chat_router
 from app.api.utils import router as utils_router
 
@@ -32,21 +32,27 @@ def _add_username_column_if_missing(sync_conn):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if Settings().database_url.startswith("sqlite"):
-        os.makedirs("data", exist_ok=True)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-        if Settings().database_url.startswith("sqlite"):
-            await conn.run_sync(_add_username_column_if_missing)
+    try:
+        async with database.engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+            if Settings().database_url.startswith("sqlite"):
+                await conn.run_sync(_add_username_column_if_missing)
+    except Exception as e:
+        if "authorization denied" in str(e).lower():
+            switch_to_fallback_sqlite()
+            async with database.engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+                await conn.run_sync(_add_username_column_if_missing)
+        else:
+            raise
     yield
-    # Shutdown
-    await engine.dispose()
+    await database.engine.dispose()
 
 
 app = FastAPI(
     title="KeyPilot",
-    description="KI-gestütztes Credential-Management – Passwort, SSH-Key, API-Key",
-    version="0.1.0",
+    description="AI-assisted credential management – passwords, SSH keys, API keys",
+    version="0.2.0",
     lifespan=lifespan,
 )
 

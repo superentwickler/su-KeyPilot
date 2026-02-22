@@ -93,6 +93,28 @@ export async function getCredentialSecret(id: number): Promise<string> {
   return d.secret
 }
 
+export async function updateCredential(
+  id: number,
+  data: { name?: string; username?: string; category?: string; description?: string; secret?: string }
+) {
+  const body: Record<string, string> = {}
+  if (data.name !== undefined) body.name = data.name
+  if (data.username !== undefined) body.username = data.username
+  if (data.category !== undefined) body.category = data.category
+  if (data.description !== undefined) body.description = data.description
+  if (data.secret !== undefined && data.secret !== "") body.secret = data.secret
+  const r = await fetch(`${BASE}/credentials/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  })
+  if (!r.ok) {
+    const e = await r.json().catch(() => ({}))
+    throw new Error(apiErrorDetail(e, "Update failed"))
+  }
+  return r.json()
+}
+
 export async function deleteCredential(id: number) {
   const r = await fetch(`${BASE}/credentials/${id}`, { method: "DELETE" })
   if (!r.ok) {

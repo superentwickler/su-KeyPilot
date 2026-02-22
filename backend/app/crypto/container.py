@@ -1,5 +1,5 @@
-# Crypto-Container: AES-256-GCM, Seal/Unseal mit Master-Key
-# Master-Key wird nie auf Disk gespeichert, nur im Speicher nach Unseal.
+# Crypto container: AES-256-GCM, seal/unseal with master key.
+# Master key is never stored on disk, only in memory after unseal.
 import secrets
 import base64
 from typing import Optional
@@ -12,13 +12,13 @@ from .kdf import derive_key, generate_salt
 
 class CryptoContainer:
     """
-    Verschüsselter Container für Secrets.
-    - Unseal: Master-Key eingeben -> Daten-Key wird abgeleitet und im Speicher gehalten.
-    - Seal: Daten-Key verwerfen, Container unbrauchbar bis erneutes Unseal.
+    Encrypted container for secrets.
+    - Unseal: enter master key -> data key is derived and kept in memory.
+    - Seal: discard data key; container unusable until next unseal.
     """
 
     def __init__(self) -> None:
-        self._aes: Optional[AESGCM] = None  # nur gesetzt wenn unsealed
+        self._aes: Optional[AESGCM] = None  # set only when unsealed
         self._sealed: bool = True
 
     @property
@@ -34,10 +34,10 @@ class CryptoContainer:
         key_check_b64: Optional[str] = None,
     ) -> bytes:
         """
-        Master-Key (z. B. vom User eingegeben) -> Container ist nutzbar.
-        salt: persistent (z. B. aus DB). Beim ersten Mal None -> neuer Salt.
-        key_check_b64: wenn gesetzt, wird geprüft ob der Key den gespeicherten Check entschlüsselt; sonst bleibt Vault zu.
-        Returns: Salt (neu oder übergeben).
+        Master key (e.g. from user) -> container is usable.
+        salt: persistent (e.g. from DB). None on first use -> new salt.
+        key_check_b64: if set, verify key decrypts stored check; otherwise vault stays sealed.
+        Returns: salt (new or passed in).
         """
         if salt is None:
             salt = generate_salt()
@@ -57,12 +57,12 @@ class CryptoContainer:
         return salt
 
     def seal(self) -> None:
-        """Schlüssel verwerfen; danach kein Lesen/Schreiben mehr möglich."""
+        """Discard key; no read/write possible afterwards."""
         self._aes = None
         self._sealed = True
 
     def encrypt(self, plaintext: str) -> str:
-        """Verschlüsselt einen String; liefert base64(Nonce + Ciphertext)."""
+        """Encrypt a string; returns base64(nonce + ciphertext)."""
         if self._sealed or self._aes is None:
             raise RuntimeError("Vault is sealed. Unseal with master key first.")
         nonce = secrets.token_bytes(12)
@@ -70,7 +70,7 @@ class CryptoContainer:
         return base64.b64encode(nonce + ct).decode("ascii")
 
     def decrypt(self, ciphertext_b64: str) -> str:
-        """Entschlüsselt einen mit encrypt() erzeugten String."""
+        """Decrypt a string produced by encrypt()."""
         if self._sealed or self._aes is None:
             raise RuntimeError("Vault is sealed. Unseal with master key first.")
         raw = base64.b64decode(ciphertext_b64.encode("ascii"))
@@ -79,7 +79,7 @@ class CryptoContainer:
         return pt.decode("utf-8")
 
 
-# Singleton für die App
+# Singleton for the app
 _container: Optional[CryptoContainer] = None
 
 
