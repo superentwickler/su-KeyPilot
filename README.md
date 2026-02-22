@@ -4,6 +4,18 @@ Credential management (passwords, SSH keys, API keys) with a **built-in crypto c
 
 **License:** [MIT](LICENSE) – free to use, modify, and distribute. For personal and non-commercial use no further permission is needed. For commercial use please get in touch (e.g. via the repository or the maintainer listed in the license).
 
+## Preview
+
+| Open vault (Unseal) | Credentials |
+|---------------------|-------------|
+| [![Login](assets/login.png)](assets/login.png) | [![Credentials](assets/cred.png)](assets/cred.png) |
+
+| New password | New SSH key |
+|--------------|-------------|
+| [![New password](assets/new_pass.png)](assets/new_pass.png) | [![New SSH key](assets/new_ssh.png)](assets/new_ssh.png) |
+
+*Unseal with master key → manage credentials (passwords, SSH keys, API keys); Chat (AI) for natural-language commands.*
+
 ---
 
 ## Installation options
