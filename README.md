@@ -179,6 +179,8 @@ Open http://localhost:5173 (or the port set in `frontend/.env`, see `frontend/.e
 
 **Note:** If you see “Connection refused” or proxy errors, start the backend in Terminal 1 first.
 
+**“400 Request Header Or Cookie Too Large”** (often after long use): Browsers can send very large `Cookie` headers to `localhost`. The Docker frontend (nginx) allows larger headers by default; if you still see this, clear site data / cookies for `localhost` in the browser, or rebuild the frontend image after pulling the latest `nginx.conf`. Local dev (`npm run dev`) rarely hits nginx; try clearing cookies for the site.
+
 ## Ollama (local LLM)
 
 Install: https://ollama.ai  

@@ -487,7 +487,7 @@ export function CredentialsPage() {
                             {formCopyFeedback && <span className="text-xs text-green-600">Copied</span>}
                           </span>
                         )}
-                        {opts.showGenerate && editingId === null && (
+                        {opts.showGenerate && (
                           <Button type="button" variant="outline" onClick={doGenerate}>
                             Generate
                           </Button>

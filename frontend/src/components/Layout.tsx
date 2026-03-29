@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react"
 import { Link, useNavigate, useLocation } from "react-router-dom"
-import { List, MessageSquare, Lock, Download, Moon, Sun } from "lucide-react"
+import { List, MessageSquare, Lock, Download, Moon, Sun, Sparkles } from "lucide-react"
 import { Button } from "./ui/button"
 import { useVaultSealed } from "../hooks/useVaultSealed"
 import { useTheme } from "../context/ThemeContext"
-import { seal as sealApi, downloadBackup } from "../api/client"
+import { seal as sealApi, downloadBackup, generatePassword } from "../api/client"
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const { sealed, loading, backendUnreachable, refresh } = useVaultSealed()
@@ -14,6 +14,22 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const isUnsealPage = location.pathname === "/unseal"
   const [sealing, setSealing] = useState(false)
   const [backingUp, setBackingUp] = useState(false)
+  const [generatingPw, setGeneratingPw] = useState(false)
+  const [genPwCopied, setGenPwCopied] = useState(false)
+
+  const handleGeneratePasswordClipboard = async () => {
+    setGeneratingPw(true)
+    try {
+      const pw = await generatePassword()
+      await navigator.clipboard.writeText(pw)
+      setGenPwCopied(true)
+      setTimeout(() => setGenPwCopied(false), 2000)
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Could not generate password.")
+    } finally {
+      setGeneratingPw(false)
+    }
+  }
 
   const handleSeal = async () => {
     setSealing(true)
@@ -92,14 +108,26 @@ export function Layout({ children }: { children: React.ReactNode }) {
   if (sealed && isUnsealPage) {
     return (
       <div className="min-h-screen flex flex-col">
-        <header className="border-b bg-card px-4 py-3 flex items-center justify-between">
+        <header className="border-b bg-card px-4 py-3 flex items-center justify-between gap-2 flex-wrap">
           <span>
             <span className="font-semibold text-lg">KeyPilot</span>
             <span className="ml-2 text-sm text-muted-foreground">– Vault sealed</span>
           </span>
-          <Button variant="ghost" size="sm" onClick={toggleTheme} title={theme === "dark" ? "Light mode" : "Dark mode"}>
-            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleGeneratePasswordClipboard}
+              disabled={generatingPw}
+              title="Generate password and copy to clipboard"
+            >
+              <Sparkles className="mr-1 h-4 w-4" />
+              {genPwCopied ? "Copied" : generatingPw ? "…" : "Generate password"}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={toggleTheme} title={theme === "dark" ? "Light mode" : "Dark mode"}>
+              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </Button>
+          </div>
         </header>
         <main className="flex-1 p-6">{children}</main>
         <footer className="border-t py-1.5 px-4 text-center text-xs text-muted-foreground">
@@ -129,6 +157,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
               Chat
             </Button>
           </Link>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleGeneratePasswordClipboard}
+            disabled={generatingPw}
+            title="Generate password and copy to clipboard"
+          >
+            <Sparkles className="mr-1 h-4 w-4" />
+            {genPwCopied ? "Copied" : generatingPw ? "…" : "Generate password"}
+          </Button>
           <Button variant="ghost" size="sm" onClick={handleBackup} disabled={backingUp} title="Download backup (DB)">
             <Download className="mr-1 h-4 w-4" />
             {backingUp ? "…" : "Backup"}
