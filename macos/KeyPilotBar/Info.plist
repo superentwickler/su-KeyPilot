@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>KeyPilot Bar</string>
+    <key>CFBundleDisplayName</key>
+    <string>KeyPilot Bar</string>
+    <key>CFBundleExecutable</key>
+    <string>KeyPilotBar</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.keypilot.bar</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>0.2.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>13.0</string>
+    <!-- Menu bar only: no Dock icon, no app switcher entry. -->
+    <key>LSUIElement</key>
+    <true/>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSHumanReadableCopyright</key>
+    <string>KeyPilot – MIT License</string>
+    <!-- Shown in the Touch ID prompt when biometric protection is enabled. -->
+    <key>NSFaceIDUsageDescription</key>
+    <string>KeyPilot Bar uses biometrics to protect access to your stored secrets.</string>
+</dict>
+</plist>

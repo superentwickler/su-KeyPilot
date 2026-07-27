@@ -18,6 +18,11 @@ dist/
 .vite/
 *.local
 
+# Swift / macOS app
+macos/**/.build/
+*.xcuserstate
+xcuserdata/
+
 # Runtime data
 backend/data/*.db
 
