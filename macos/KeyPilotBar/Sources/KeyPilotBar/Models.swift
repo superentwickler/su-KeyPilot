@@ -74,3 +74,14 @@ enum CredentialType: String, CaseIterable, Identifiable {
         CredentialType(rawValue: raw) ?? .other
     }
 }
+
+extension Credential {
+    /// `updated_at` as a date; nil when the backend sent something unparsable.
+    var updatedAtDate: Date? { BackendDate.parse(updatedAt) }
+
+    var createdAtDate: Date? { BackendDate.parse(createdAt) }
+
+    /// Only password entries get the age hint and the rotate action – SSH keys
+    /// and API keys are not rotated by generating a random string.
+    var isRotatable: Bool { CredentialType.from(type) == .password }
+}

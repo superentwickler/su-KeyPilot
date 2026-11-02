@@ -11,17 +11,33 @@ enum Screen: Equatable {
     case settings
 }
 
+/// Optional button inside a toast, e.g. "Undo" after a password rotation.
+struct ToastAction: Identifiable {
+    let id = UUID()
+    let label: String
+    let perform: () -> Void
+}
+
 @MainActor
 final class VaultStore: ObservableObject {
     @Published var screen: Screen = .list
     @Published var sealed = true
-    @Published var credentials: [Credential] = []
-    @Published var query = ""
+
+    @Published var credentials: [Credential] = [] {
+        didSet { recomputeFiltered() }
+    }
+    @Published var query = "" {
+        didSet { recomputeFiltered() }
+    }
+    /// Search result, recomputed only when the list or the query changes.
+    /// It used to be a computed property that re-sorted on every view update.
+    @Published private(set) var filtered: [Credential] = []
     @Published var selectedID: Int?
 
     @Published var loading = false
     @Published var errorMessage: String?
     @Published var toast: String?
+    @Published var toastAction: ToastAction?
     @Published var unlockHint: String?
 
     /// Secret currently shown in the list (auto-hides again).
@@ -45,26 +61,54 @@ final class VaultStore: ObservableObject {
 
     /// Case-insensitive match on name, username, category and type label.
     /// Prefix matches on the name rank first, then name matches, then the rest.
-    var filtered: [Credential] {
+    private func recomputeFiltered() {
         let q = query.trimmingCharacters(in: .whitespaces).lowercased()
-        guard !q.isEmpty else { return credentials }
-        return credentials.compactMap { c -> (Credential, Int)? in
-            let name = c.name.lowercased()
-            if name.hasPrefix(q) { return (c, 0) }
-            if name.contains(q) { return (c, 1) }
-            if c.username.lowercased().contains(q) { return (c, 2) }
-            if c.category.lowercased().contains(q) { return (c, 3) }
-            if CredentialType.from(c.type).label.lowercased().contains(q) { return (c, 4) }
-            if c.description.lowercased().contains(q) { return (c, 5) }
-            return nil
+        if q.isEmpty {
+            filtered = credentials
+        } else {
+            filtered = credentials.compactMap { c -> (Credential, Int)? in
+                let name = c.name.lowercased()
+                if name.hasPrefix(q) { return (c, 0) }
+                if name.contains(q) { return (c, 1) }
+                if c.username.lowercased().contains(q) { return (c, 2) }
+                if c.category.lowercased().contains(q) { return (c, 3) }
+                if CredentialType.from(c.type).label.lowercased().contains(q) { return (c, 4) }
+                if c.description.lowercased().contains(q) { return (c, 5) }
+                return nil
+            }
+            .sorted { $0.1 == $1.1 ? $0.0.name.lowercased() < $1.0.name.lowercased() : $0.1 < $1.1 }
+            .map(\.0)
         }
-        .sorted { $0.1 == $1.1 ? $0.0.name.lowercased() < $1.0.name.lowercased() : $0.1 < $1.1 }
-        .map(\.0)
+        // Keep the selection on a visible row.
+        if selectedID == nil || !filtered.contains(where: { $0.id == selectedID }) {
+            selectedID = filtered.first?.id
+        }
     }
 
     var selected: Credential? {
         guard let selectedID else { return nil }
         return credentials.first { $0.id == selectedID }
+    }
+
+    // MARK: - Secret age
+
+    /// When the secret was last changed, as far as we can tell. A local
+    /// rotation timestamp wins over `updated_at`, which also moves on
+    /// metadata-only edits. See SecretAge.swift.
+    func secretChangedAt(_ credential: Credential) -> Date? {
+        RotationLog.date(for: credential.id) ?? credential.updatedAtDate
+    }
+
+    func secretAgeDays(_ credential: Credential) -> Int? {
+        guard let date = secretChangedAt(credential) else { return nil }
+        return SecretAge.days(since: date)
+    }
+
+    /// True when a password entry is older than the configured warning threshold.
+    func isStale(_ credential: Credential) -> Bool {
+        let threshold = settings.passwordAgeWarningDays
+        guard threshold > 0, credential.isRotatable, let days = secretAgeDays(credential) else { return false }
+        return days >= threshold
     }
 
     // MARK: - Lifecycle
@@ -80,6 +124,7 @@ final class VaultStore: ObservableObject {
             let status = try await api.vaultStatus()
             sealed = status.sealed
             if status.sealed {
+                autoLockTask?.cancel()
                 if settings.rememberMasterKey, let stored = Keychain.read(baseURL: settings.baseURL) {
                     await unseal(masterKey: stored, remember: false, fromKeychain: true)
                     return
@@ -89,6 +134,10 @@ final class VaultStore: ObservableObject {
             } else {
                 if screen == .unlock { screen = .list }
                 await loadCredentials()
+                // The vault can already be unsealed when the app starts (or after
+                // the web UI unsealed it), in which case nothing had ever armed
+                // the inactivity timer and the vault stayed open indefinitely.
+                scheduleAutoLock()
             }
         } catch {
             errorMessage = error.localizedDescription
@@ -101,10 +150,8 @@ final class VaultStore: ObservableObject {
         defer { loading = false }
         do {
             credentials = try await api.credentials()
+            RotationLog.prune(keeping: Set(credentials.map(\.id)))
             errorMessage = nil
-            if selectedID == nil || !credentials.contains(where: { $0.id == selectedID }) {
-                selectedID = filtered.first?.id
-            }
         } catch APIError.sealed {
             sealed = true
             screen = .unlock
@@ -156,6 +203,7 @@ final class VaultStore: ObservableObject {
             sealed = true
             credentials = []
             clearRevealed()
+            dismissToast()
             query = ""
             screen = .unlock
             unlockHint = nil
@@ -214,20 +262,24 @@ final class VaultStore: ObservableObject {
         guard await confirmBiometrics(for: "reveal the secret for “\(credential.name)”") else { return }
         do {
             let secret = try await api.secret(for: credential.id)
-            revealedID = credential.id
-            revealedSecret = secret
+            reveal(secret, for: credential.id)
             scheduleAutoLock()
-            revealTask?.cancel()
-            revealTask = Task { [weak self] in
-                try? await Task.sleep(nanoseconds: 20_000_000_000)
-                guard !Task.isCancelled else { return }
-                await MainActor.run { self?.clearRevealed() }
-            }
         } catch APIError.sealed {
             sealed = true
             screen = .unlock
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    private func reveal(_ secret: String, for id: Int, seconds: UInt64 = 20) {
+        revealedID = id
+        revealedSecret = secret
+        revealTask?.cancel()
+        revealTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: seconds * 1_000_000_000)
+            guard !Task.isCancelled else { return }
+            await MainActor.run { self?.clearRevealed() }
         }
     }
 
@@ -244,6 +296,100 @@ final class VaultStore: ObservableObject {
         return ok
     }
 
+    // MARK: - Rotation
+
+    /// One-step password change for an existing entry: generate, store, copy.
+    ///
+    /// This is the fast path for "the site wants a new password". The new value
+    /// is shown in the row and placed on the clipboard, and the previous one is
+    /// kept in memory for the lifetime of the undo toast so a rotation can be
+    /// rolled back if the site rejected the password.
+    func rotatePassword(for credential: Credential) async {
+        guard credential.isRotatable else {
+            showToast("Only password entries can be rotated")
+            return
+        }
+        guard await confirmBiometrics(for: "set a new password for “\(credential.name)”") else { return }
+
+        let fresh: String
+        do {
+            fresh = try PasswordGenerator.generate(length: settings.generatorLength,
+                                                   useDigits: settings.generatorDigits,
+                                                   useSymbols: settings.generatorSymbols)
+        } catch {
+            errorMessage = error.localizedDescription
+            return
+        }
+        await writeSecret(fresh, to: credential)
+    }
+
+    /// Writes a password produced on the generator screen into an existing
+    /// entry, so the value you looked at is the value that gets saved.
+    func applyGeneratedPassword(_ password: String, to credential: Credential) async {
+        guard !password.isEmpty else { return }
+        guard credential.isRotatable else {
+            showToast("Only password entries can be rotated")
+            return
+        }
+        guard await confirmBiometrics(for: "set a new password for “\(credential.name)”") else { return }
+        await writeSecret(password, to: credential)
+        // writeSecret may have switched to the unlock screen on a sealed vault.
+        if screen == .generator { screen = .list }
+    }
+
+    private func writeSecret(_ password: String, to credential: Credential) async {
+        guard let api else { return }
+        loading = true
+        defer { loading = false }
+        do {
+            // Read the old secret first so the change stays undoable. A failure
+            // here is not fatal; the rotation then simply has no undo.
+            let previous = try? await api.secret(for: credential.id)
+            _ = try await api.updateSecret(id: credential.id, secret: password)
+            RotationLog.record(credentialID: credential.id)
+
+            Clipboard.copy(password, clearAfter: settings.clipboardClearSeconds)
+            reveal(password, for: credential.id)
+            selectedID = credential.id
+            errorMessage = nil
+            scheduleAutoLock()
+
+            let clears = settings.clipboardClearSeconds > 0
+                ? " – clears in \(settings.clipboardClearSeconds)s"
+                : ""
+            if let previous {
+                showToast("New password saved & copied\(clears)", seconds: 12,
+                          action: ToastAction(label: "Undo") { [weak self] in
+                              Task { await self?.restoreSecret(id: credential.id, secret: previous) }
+                          })
+            } else {
+                showToast("New password saved & copied\(clears)", seconds: 6)
+            }
+            await loadCredentials()
+        } catch APIError.sealed {
+            sealed = true
+            screen = .unlock
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    /// Writes a previous secret back after an unwanted rotation.
+    func restoreSecret(id: Int, secret: String) async {
+        guard let api else { return }
+        dismissToast()
+        do {
+            _ = try await api.updateSecret(id: id, secret: secret)
+            RotationLog.forget(credentialID: id)
+            clearRevealed()
+            Clipboard.copy(secret, clearAfter: settings.clipboardClearSeconds)
+            showToast("Previous password restored & copied")
+            await loadCredentials()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     // MARK: - Editing
 
     func startNew() {
@@ -258,6 +404,14 @@ final class VaultStore: ObservableObject {
         screen = .editor
     }
 
+    /// True while the editor holds changes that closing the panel would lose.
+    var hasUnsavedDraft: Bool {
+        guard screen == .editor else { return false }
+        guard let id = editingID else { return !draft.isEmpty }
+        guard let original = credentials.first(where: { $0.id == id }) else { return true }
+        return !draft.secret.isEmpty || draft != CredentialDraft(from: original)
+    }
+
     func saveDraft() async {
         guard let api else { return }
         let name = draft.name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -270,6 +424,7 @@ final class VaultStore: ObservableObject {
             return
         }
         draft.name = name
+        let secretChanged = !draft.secret.isEmpty
         loading = true
         defer { loading = false }
         do {
@@ -279,6 +434,8 @@ final class VaultStore: ObservableObject {
             } else {
                 saved = try await api.create(draft)
             }
+            // A secret entered by hand counts as a rotation for the age display.
+            if secretChanged { RotationLog.record(credentialID: saved.id) }
             errorMessage = nil
             selectedID = saved.id
             screen = .list
@@ -298,6 +455,7 @@ final class VaultStore: ObservableObject {
         guard let api else { return }
         do {
             try await api.delete(id: credential.id)
+            RotationLog.forget(credentialID: credential.id)
             clearRevealed()
             showToast("Deleted “\(credential.name)”")
             await loadCredentials()
@@ -319,16 +477,45 @@ final class VaultStore: ObservableObject {
         selectedID = items[next].id
     }
 
+    // MARK: - Panel
+
+    /// The panel closed: drop everything transient so the next open starts on
+    /// the list with an empty search instead of resuming a stale screen.
+    /// An editor with unsaved input is the one thing worth keeping.
+    func panelDidClose() {
+        clearRevealed()
+        dismissToast()
+        errorMessage = nil
+        query = ""
+        switch screen {
+        case .unlock:
+            break
+        case .editor where hasUnsavedDraft:
+            break
+        default:
+            screen = .list
+        }
+    }
+
     // MARK: - Feedback
 
-    func showToast(_ message: String) {
+    func showToast(_ message: String, seconds: Double = 2.5, action: ToastAction? = nil) {
         toast = message
+        toastAction = action
         toastTask?.cancel()
         toastTask = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: 2_500_000_000)
+            try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
             guard !Task.isCancelled else { return }
-            await MainActor.run { self?.toast = nil }
+            await MainActor.run { self?.dismissToast() }
         }
+    }
+
+    /// Clearing `toastAction` also releases the previous secret captured by an
+    /// undo action, so it is not held in memory longer than the toast is shown.
+    func dismissToast() {
+        toastTask?.cancel()
+        toast = nil
+        toastAction = nil
     }
 
     // MARK: - Auto lock
@@ -336,6 +523,7 @@ final class VaultStore: ObservableObject {
     /// Restarts the inactivity timer that seals the vault again.
     func scheduleAutoLock() {
         autoLockTask?.cancel()
+        guard !sealed else { return }
         let minutes = settings.autoLockMinutes
         guard minutes > 0 else { return }
         autoLockTask = Task { [weak self] in

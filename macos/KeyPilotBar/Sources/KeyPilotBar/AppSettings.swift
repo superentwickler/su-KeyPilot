@@ -45,6 +45,11 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(generatorDigits, forKey: "generatorDigits") }
     }
 
+    /// A password older than this many days is flagged in the list. 0 = never flag.
+    @Published var passwordAgeWarningDays: Int {
+        didSet { defaults.set(passwordAgeWarningDays, forKey: "passwordAgeWarningDays") }
+    }
+
     private init() {
         defaults.register(defaults: [
             "baseURL": "http://localhost:8000",
@@ -55,6 +60,7 @@ final class AppSettings: ObservableObject {
             "generatorLength": 24,
             "generatorSymbols": true,
             "generatorDigits": true,
+            "passwordAgeWarningDays": 365,
         ])
         baseURL = defaults.string(forKey: "baseURL") ?? "http://localhost:8000"
         clipboardClearSeconds = defaults.integer(forKey: "clipboardClearSeconds")
@@ -64,5 +70,6 @@ final class AppSettings: ObservableObject {
         generatorLength = defaults.integer(forKey: "generatorLength")
         generatorSymbols = defaults.bool(forKey: "generatorSymbols")
         generatorDigits = defaults.bool(forKey: "generatorDigits")
+        passwordAgeWarningDays = defaults.integer(forKey: "passwordAgeWarningDays")
     }
 }

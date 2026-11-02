@@ -9,6 +9,7 @@ struct SettingsView: View {
 
     private let clearOptions = [0, 15, 30, 60, 120]
     private let lockOptions = [0, 5, 15, 60, 480]
+    private let ageOptions = [0, 90, 180, 365, 730]
 
     var body: some View {
         VStack(spacing: 0) {
@@ -52,6 +53,18 @@ struct SettingsView: View {
                         .onChange(of: settings.autoLockMinutes) { _ in store.scheduleAutoLock() }
                     }
                     Text("Locking seals the vault in the backend – the web UI is locked as well.")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+
+                    LabeledField(label: "Flag passwords older than") {
+                        Picker("", selection: $settings.passwordAgeWarningDays) {
+                            ForEach(ageOptions, id: \.self) { days in
+                                Text(label(forDays: days)).tag(days)
+                            }
+                        }
+                        .labelsHidden()
+                    }
+                    Text("The age comes from the entry's last change. KeyPilot Bar additionally remembers its own rotations, so the value gets more precise over time.")
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
 
@@ -103,6 +116,17 @@ struct SettingsView: View {
         case 60: return "1 hour"
         case 480: return "8 hours"
         default: return "\(minutes) minutes"
+        }
+    }
+
+    private func label(forDays days: Int) -> String {
+        switch days {
+        case 0:   return "Never flag"
+        case 90:  return "3 months"
+        case 180: return "6 months"
+        case 365: return "1 year"
+        case 730: return "2 years"
+        default:  return "\(days) days"
         }
     }
 

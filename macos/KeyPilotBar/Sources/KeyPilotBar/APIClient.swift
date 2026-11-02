@@ -75,6 +75,12 @@ struct APIClient {
         try await send("PATCH", "/credentials/\(id)", body: draft.updatePayload(), decode: Credential.self)
     }
 
+    /// Replaces only the secret and leaves every metadata field untouched.
+    /// Used by the one-step password rotation from the credential list.
+    func updateSecret(id: Int, secret: String) async throws -> Credential {
+        try await send("PATCH", "/credentials/\(id)", body: ["secret": secret], decode: Credential.self)
+    }
+
     func delete(id: Int) async throws {
         _ = try await sendRaw("DELETE", "/credentials/\(id)")
     }
@@ -138,7 +144,7 @@ struct APIClient {
 }
 
 /// Values used when creating or editing a credential.
-struct CredentialDraft {
+struct CredentialDraft: Equatable {
     var type: CredentialType = .password
     var name: String = ""
     var username: String = ""
@@ -147,6 +153,12 @@ struct CredentialDraft {
     var secret: String = ""
 
     init() {}
+
+    /// Nothing typed yet – closing the panel on such a draft loses nothing.
+    var isEmpty: Bool {
+        name.isEmpty && username.isEmpty && category.isEmpty
+            && description.isEmpty && secret.isEmpty
+    }
 
     init(from c: Credential) {
         type = .from(c.type)

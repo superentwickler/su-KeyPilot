@@ -1,5 +1,6 @@
 // Create or edit a credential.
 import SwiftUI
+import AppKit
 
 struct EditorView: View {
     @EnvironmentObject var store: VaultStore
@@ -65,18 +66,20 @@ struct EditorView: View {
                                         .font(.caption)
                                 }
                                 if store.draft.type == .password {
-                                    Button("Generate") {
-                                        store.draft.secret = PasswordGenerator.generate(
-                                            length: settings.generatorLength,
-                                            useDigits: settings.generatorDigits,
-                                            useSymbols: settings.generatorSymbols
-                                        )
-                                        showSecret = true
-                                    }
-                                    .buttonStyle(.link)
-                                    .font(.caption)
+                                    Button("Generate") { generate() }
+                                        .buttonStyle(.link)
+                                        .font(.caption)
+                                    Button("Paste") { pasteSecret() }
+                                        .buttonStyle(.link)
+                                        .font(.caption)
+                                        .help("Paste a password from the clipboard (⌘V also works)")
                                 }
                                 Spacer()
+                                if !store.draft.secret.isEmpty, store.draft.type == .password {
+                                    Text(ruleHint)
+                                        .font(.caption2)
+                                        .foregroundStyle(meetsRules ? Color.secondary : Color.orange)
+                                }
                             }
                         }
                     }
@@ -126,6 +129,43 @@ struct EditorView: View {
 
     private var secretPlaceholder: String {
         isEditing ? "unchanged" : "required"
+    }
+
+    private var meetsRules: Bool {
+        PasswordGenerator.satisfiesRules(store.draft.secret,
+                                         useDigits: settings.generatorDigits,
+                                         useSymbols: settings.generatorSymbols)
+    }
+
+    private var ruleHint: String {
+        meetsRules ? "meets the rules" : "missing a character class"
+    }
+
+    private func generate() {
+        do {
+            store.draft.secret = try PasswordGenerator.generate(
+                length: settings.generatorLength,
+                useDigits: settings.generatorDigits,
+                useSymbols: settings.generatorSymbols
+            )
+            showSecret = true
+            store.errorMessage = nil
+        } catch {
+            store.errorMessage = error.localizedDescription
+        }
+    }
+
+    /// Explicit button next to Generate: ⌘V works now that the app has a main
+    /// menu, but a visible control makes the path obvious.
+    private func pasteSecret() {
+        guard let text = NSPasteboard.general.string(forType: .string),
+              !text.isEmpty else {
+            store.errorMessage = "The clipboard holds no text."
+            return
+        }
+        store.draft.secret = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        showSecret = true
+        store.errorMessage = nil
     }
 
     private var secretPlainField: some View {

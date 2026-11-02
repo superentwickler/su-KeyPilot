@@ -25,6 +25,9 @@ struct CredentialListView: View {
         .onReceive(NotificationCenter.default.publisher(for: .panelDidOpen)) { _ in
             searchFocused = true
         }
+        .onReceive(NotificationCenter.default.publisher(for: .focusSearch)) { _ in
+            searchFocused = true
+        }
     }
 
     // MARK: - Search
@@ -35,19 +38,15 @@ struct CredentialListView: View {
                 .foregroundStyle(.secondary)
                 .font(.system(size: 12, weight: .medium))
 
-            TextField("Search credentials…", text: $store.query)
+            // Selection is kept on a visible row by the store, which recomputes
+            // the filtered list whenever the query changes.
+            TextField("Search credentials… (⌘F)", text: $store.query)
                 .textFieldStyle(.plain)
                 .font(.system(size: 14))
                 .focused($searchFocused)
                 .onSubmit {
                     if let credential = store.selected {
                         Task { await store.copySecret(credential) }
-                    }
-                }
-                .onChange(of: store.query) { _ in
-                    // Keep the selection on a visible row while typing.
-                    if store.selected == nil || !store.filtered.contains(where: { $0.id == store.selectedID }) {
-                        store.selectedID = store.filtered.first?.id
                     }
                 }
 
@@ -61,8 +60,8 @@ struct CredentialListView: View {
                 .buttonStyle(.plain)
             }
 
-            IconButton(symbol: "plus", help: "New credential", prominent: true) { store.startNew() }
-            IconButton(symbol: "dice", help: "Password generator") { store.screen = .generator }
+            IconButton(symbol: "plus", help: "New credential (⌘N)", prominent: true) { store.startNew() }
+            IconButton(symbol: "dice", help: "Password generator (⌘G)") { store.screen = .generator }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
@@ -124,10 +123,10 @@ struct CredentialListView: View {
             IconButton(symbol: "arrow.clockwise", help: "Reload") {
                 Task { await store.loadCredentials() }
             }
-            IconButton(symbol: "lock.fill", help: "Lock vault") {
+            IconButton(symbol: "lock.fill", help: "Lock vault (⌘L)") {
                 Task { await store.lock() }
             }
-            IconButton(symbol: "gearshape", help: "Settings") { store.screen = .settings }
+            IconButton(symbol: "gearshape", help: "Settings (⌘,)") { store.screen = .settings }
             IconButton(symbol: "power", help: "Quit KeyPilot Bar") { NSApp.terminate(nil) }
         }
         .padding(.horizontal, 10)
@@ -139,7 +138,7 @@ struct CredentialListView: View {
         let count = store.filtered.count
         let total = store.credentials.count
         let scope = store.query.isEmpty ? "\(total) entries" : "\(count) of \(total)"
-        return "\(scope)  ·  ⏎ copy  ·  ⇧⏎ user  ·  ⌘⏎ show"
+        return "\(scope)  ·  ⏎ copy  ·  ⌘⏎ show  ·  ⌘R new password"
     }
 }
 
@@ -154,6 +153,7 @@ struct CredentialRow: View {
     private var isSelected: Bool { store.selectedID == credential.id }
     private var isRevealed: Bool { store.revealedID == credential.id }
     private var type: CredentialType { .from(credential.type) }
+    private var showsActions: Bool { hovering || isSelected }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -166,9 +166,17 @@ struct CredentialRow: View {
                     .foregroundStyle(Color.accentColor)
 
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(credential.name.isEmpty ? "(no name)" : credential.name)
-                        .font(.system(size: 13, weight: .medium))
-                        .lineLimit(1)
+                    HStack(spacing: 4) {
+                        Text(credential.name.isEmpty ? "(no name)" : credential.name)
+                            .font(.system(size: 13, weight: .medium))
+                            .lineLimit(1)
+                        if store.isStale(credential) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.system(size: 9))
+                                .foregroundStyle(.orange)
+                                .help(ageHelp)
+                        }
+                    }
                     if !subtitle.isEmpty {
                         Text(subtitle)
                             .font(.system(size: 11))
@@ -179,8 +187,14 @@ struct CredentialRow: View {
 
                 Spacer(minLength: 4)
 
-                if hovering || isSelected {
+                if showsActions {
                     HStack(spacing: 4) {
+                        if credential.isRotatable {
+                            IconButton(symbol: "arrow.triangle.2.circlepath",
+                                       help: "Generate a new password, save it and copy it (⌘R)") {
+                                Task { await store.rotatePassword(for: credential) }
+                            }
+                        }
                         IconButton(symbol: isRevealed ? "eye.slash" : "eye", help: "Show secret (⌘⏎)") {
                             Task { await store.toggleReveal(credential) }
                         }
@@ -188,6 +202,14 @@ struct CredentialRow: View {
                             Task { await store.copySecret(credential) }
                         }
                     }
+                } else if let age = ageBadge {
+                    // Swapped out for the action buttons on hover so the row
+                    // never has to fit both.
+                    Text(age)
+                        .font(.system(size: 10, weight: .medium))
+                        .monospacedDigit()
+                        .foregroundStyle(store.isStale(credential) ? Color.orange : Color.secondary)
+                        .help(ageHelp)
                 }
             }
 
@@ -218,6 +240,12 @@ struct CredentialRow: View {
             Button(isRevealed ? "Hide secret" : "Show secret") {
                 Task { await store.toggleReveal(credential) }
             }
+            if credential.isRotatable {
+                Divider()
+                Button("New password – save & copy") {
+                    Task { await store.rotatePassword(for: credential) }
+                }
+            }
             Divider()
             Button("Edit…") { store.startEdit(credential) }
             Button("Delete…", role: .destructive) { confirmDelete = true }
@@ -234,5 +262,16 @@ struct CredentialRow: View {
         [credential.username, credential.category, type.label]
             .filter { !$0.isEmpty }
             .joined(separator: " · ")
+    }
+
+    /// Age is only meaningful for passwords – an SSH key is not expected to rotate.
+    private var ageBadge: String? {
+        guard credential.isRotatable, let days = store.secretAgeDays(credential) else { return nil }
+        return SecretAge.short(days: days)
+    }
+
+    private var ageHelp: String {
+        guard let days = store.secretAgeDays(credential) else { return "" }
+        return "Password \(SecretAge.long(days: days))"
     }
 }

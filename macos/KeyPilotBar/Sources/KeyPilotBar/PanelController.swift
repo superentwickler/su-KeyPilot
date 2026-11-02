@@ -72,7 +72,7 @@ final class PanelController: NSObject, NSWindowDelegate {
 
     func close() {
         removeKeyMonitor()
-        store.clearRevealed()
+        store.panelDidClose()
         panel.orderOut(nil)
     }
 
@@ -92,6 +92,9 @@ final class PanelController: NSObject, NSWindowDelegate {
     // MARK: - NSWindowDelegate
 
     func windowDidResignKey(_ notification: Notification) {
+        // A confirmation dialog (e.g. "Delete credential?") takes key focus
+        // away from the panel. Closing here would tear the dialog down with it.
+        guard panel.attachedSheet == nil, NSApp.modalWindow == nil else { return }
         close()
     }
 
@@ -113,6 +116,17 @@ final class PanelController: NSObject, NSWindowDelegate {
     /// Returns true when the event was consumed.
     private func handle(_ event: NSEvent) -> Bool {
         let escape = 53, arrowDown = 125, arrowUp = 126, returnKey = 36, keypadEnter = 76
+
+        // ⌘-shortcuts first. Only plain ⌘ combinations are claimed, so the
+        // standard editing keys (⌘V/⌘C/⌘X/⌘A/⌘Z) stay with the main menu and
+        // keep working inside text fields.
+        // Caps Lock is deliberately not part of the mask – otherwise every
+        // shortcut would stop working while it is on.
+        let modifiers = event.modifierFlags.intersection([.command, .shift, .option, .control])
+        if modifiers == .command, let key = event.charactersIgnoringModifiers?.lowercased(),
+           handleCommandShortcut(key) {
+            return true
+        }
 
         // Escape works on every screen.
         if Int(event.keyCode) == escape {
@@ -161,9 +175,51 @@ final class PanelController: NSObject, NSWindowDelegate {
             return false
         }
     }
+
+    /// Single-key ⌘ shortcuts. Returns true when the key was claimed.
+    private func handleCommandShortcut(_ key: String) -> Bool {
+        // Available everywhere.
+        switch key {
+        case ",":
+            store.screen = .settings
+            return true
+        case "l":
+            Task { await store.lock() }
+            return true
+        default:
+            break
+        }
+
+        // The rest only applies to the list, so typing in the editor or the
+        // settings form is never interrupted.
+        guard store.screen == .list else { return false }
+        switch key {
+        case "n":
+            store.startNew()
+            return true
+        case "g":
+            store.screen = .generator
+            return true
+        case "f":
+            NotificationCenter.default.post(name: .focusSearch, object: nil)
+            return true
+        case "r":
+            guard let credential = store.selected else { return true }
+            Task { await store.rotatePassword(for: credential) }
+            return true
+        case "e":
+            guard let credential = store.selected else { return true }
+            store.startEdit(credential)
+            return true
+        default:
+            return false
+        }
+    }
 }
 
 extension Notification.Name {
     /// Lets the search field regain focus whenever the panel opens.
     static let panelDidOpen = Notification.Name("KeyPilotBarPanelDidOpen")
+    /// ⌘F: put the caret back into the search field.
+    static let focusSearch = Notification.Name("KeyPilotBarFocusSearch")
 }

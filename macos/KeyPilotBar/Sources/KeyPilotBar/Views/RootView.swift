@@ -18,15 +18,27 @@ struct RootView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             if let toast = store.toast {
-                Text(toast)
-                    .font(.callout.weight(.medium))
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                    .background(.thickMaterial, in: Capsule())
-                    .overlay(Capsule().strokeBorder(Color.primary.opacity(0.12)))
-                    .shadow(radius: 8, y: 2)
-                    .padding(.bottom, 14)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                HStack(spacing: 10) {
+                    Text(toast)
+                        .font(.callout.weight(.medium))
+                    // Present e.g. after a password rotation, for as long as the
+                    // toast lives. Dismissing it releases the old secret.
+                    if let action = store.toastAction {
+                        Divider().frame(height: 14)
+                        Button(action.label) { action.perform() }
+                            .buttonStyle(.plain)
+                            .font(.callout.weight(.semibold))
+                            .foregroundStyle(Color.accentColor)
+                    }
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(.thickMaterial, in: Capsule())
+                .overlay(Capsule().strokeBorder(Color.primary.opacity(0.12)))
+                .shadow(radius: 8, y: 2)
+                .padding(.horizontal, 12)
+                .padding(.bottom, 14)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         .animation(.easeOut(duration: 0.18), value: store.toast)
